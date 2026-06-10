@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager, TextInput } from 'react-native';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDeviceStore } from '../../stores/deviceStore';
+import { useSyncStore } from '../../stores/syncStore';
 import { TaskItem } from '../../components/TaskItem';
 import { ProgressBar } from '../../components/ProgressBar';
 import { calculateChapterProgress, calculateSubjectProgress } from '../../utils/helpers';
@@ -18,10 +19,20 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function SyllabusScreen() {
   const { colors, typography, shapes, isDark } = useM3Theme();
   const clientId = useDeviceStore((state) => state.clientId);
+  const isOnline = useDeviceStore((state) => state.isOnline[clientId]);
   const subjects = useSyllabusStore((state) => state.subjects[clientId] || EMPTY_ARRAY);
   const updateTaskStatus = useSyllabusStore((state) => state.updateTaskStatus);
   const deleteTask = useSyllabusStore((state) => state.deleteTask);
   const addTask = useSyllabusStore((state) => state.addTask);
+  const initializeSyllabus = useSyllabusStore((state) => state.initializeIfNeeded);
+
+  // Sync state on load or when switching clients
+  useEffect(() => {
+    initializeSyllabus();
+    if (isOnline) {
+      useSyncStore.getState().sync(clientId);
+    }
+  }, [clientId, isOnline]);
 
   const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({
     'sub-math': true,

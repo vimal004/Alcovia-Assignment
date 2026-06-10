@@ -7,10 +7,8 @@ import { useDeviceStore } from './deviceStore';
 import { useServerStore } from './serverStore';
 
 interface SyncState {
-  // All sync actions across all clients
   actions: SyncAction[];
 
-  // Actions
   addAction: (params: {
     clientId: string;
     studentId: string;
@@ -23,6 +21,8 @@ interface SyncState {
   clearActions: (clientId: string) => void;
   sync: (clientId: ClientId) => Promise<void>;
 }
+
+const SERVER_URL = 'http://localhost:3001';
 
 export const useSyncStore = create<SyncState>()(
   persist(
@@ -45,7 +45,6 @@ export const useSyncStore = create<SyncState>()(
           actions: [...state.actions, action],
         }));
 
-        // Trigger automatic sync if online
         const { isOnline } = useDeviceStore.getState();
         if (isOnline[clientId as ClientId]) {
           get().sync(clientId as ClientId);
@@ -84,79 +83,50 @@ export const useSyncStore = create<SyncState>()(
         const pendingActions = get().getPendingActions(clientId);
         const clientTasks = useSyllabusStore.getState().subjects[clientId] || [];
 
-        // Call server sync engine
-        const result = useServerStore.getState().syncClient(clientId, pendingActions, clientTasks);
+        try {
+          // Send actions to Express API
+          const response = await fetch(`${SERVER_URL}/api/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clientId,
+              clientActions: pendingActions,
+              clientTasks,
+            }),
+          });
 
-        // Mark local actions as synced
-        result.syncedActionIds.forEach((id) => {
-          get().markSynced(id);
-        });
+          if (!response.ok) {
+            throw new Error(`Sync failed with status code ${response.status}`);
+          }
 
-        // 1. Sync Focus Sessions & Student State
-        useFocusStore.setState((state: any) => ({
-          sessions: {
-            ...state.sessions,
-            [clientId]: result.canonicalSessions,
-          },
-          studentState: {
-            ...state.studentState,
-            [clientId]: result.canonicalStudentState,
-          },
-        }));
+          const result = await response.json();
 
-        // 2. Sync Syllabus Tasks
-        useSyllabusStore.setState((state: any) => {
-          const clientSubjects = state.subjects[clientId] || [];
-          const updatedSubjects = clientSubjects.map((sub: Subject) => ({
-            ...sub,
-            chapters: sub.chapters.map((ch: Chapter) => ({
-              ...ch,
-              tasks: ch.tasks.map((t: Task) => {
-                const canonicalTask = result.canonicalTasks[t.id];
-                return canonicalTask ? { ...canonicalTask } : t;
-              }),
-            })),
-          }));
-
-          return {
-            subjects: {
-              ...state.subjects,
-              [clientId]: updatedSubjects,
-            },
-          };
-        });
-
-        // If the other device is online, sync it too to pull the latest state
-        const otherClientId: ClientId = clientId === 'client-A' ? 'client-B' : 'client-A';
-        if (isOnline[otherClientId]) {
-          const otherPending = get().getPendingActions(otherClientId);
-          const otherTasks = useSyllabusStore.getState().subjects[otherClientId] || [];
-
-          const otherResult = useServerStore.getState().syncClient(otherClientId, otherPending, otherTasks);
-
-          otherResult.syncedActionIds.forEach((id) => {
+          // Mark local actions as synced based on what the server processed successfully
+          result.syncedActionIds.forEach((id: string) => {
             get().markSynced(id);
           });
 
+          // 1. Sync Focus Sessions & Student State on client
           useFocusStore.setState((state: any) => ({
             sessions: {
               ...state.sessions,
-              [otherClientId]: otherResult.canonicalSessions,
+              [clientId]: result.canonicalSessions,
             },
             studentState: {
               ...state.studentState,
-              [otherClientId]: otherResult.canonicalStudentState,
+              [clientId]: result.canonicalStudentState,
             },
           }));
 
+          // 2. Sync Syllabus Tasks on client
           useSyllabusStore.setState((state: any) => {
-            const otherSubjects = state.subjects[otherClientId] || [];
-            const updatedOtherSubjects = otherSubjects.map((sub: Subject) => ({
+            const clientSubjects = state.subjects[clientId] || [];
+            const updatedSubjects = clientSubjects.map((sub: Subject) => ({
               ...sub,
               chapters: sub.chapters.map((ch: Chapter) => ({
                 ...ch,
                 tasks: ch.tasks.map((t: Task) => {
-                  const canonicalTask = otherResult.canonicalTasks[t.id];
+                  const canonicalTask = result.canonicalTasks[t.id];
                   return canonicalTask ? { ...canonicalTask } : t;
                 }),
               })),
@@ -165,10 +135,79 @@ export const useSyncStore = create<SyncState>()(
             return {
               subjects: {
                 ...state.subjects,
-                [otherClientId]: updatedOtherSubjects,
+                [clientId]: updatedSubjects,
               },
             };
           });
+
+          // 3. Update local copy of Server State Cache for Dev Panel Grid render
+          useServerStore.setState({
+            tasks: result.canonicalTasks,
+            sessions: result.canonicalSessions,
+            studentState: result.canonicalStudentState,
+          });
+
+          // Refresh log console
+          await useServerStore.getState().fetchServerState();
+
+          // If the other device is online, trigger a sync for it as well to pull down latest merged state
+          const otherClientId: ClientId = clientId === 'client-A' ? 'client-B' : 'client-A';
+          if (isOnline[otherClientId]) {
+            const otherPending = get().getPendingActions(otherClientId);
+            const otherTasks = useSyllabusStore.getState().subjects[otherClientId] || [];
+
+            const otherResponse = await fetch(`${SERVER_URL}/api/sync`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientId: otherClientId,
+                clientActions: otherPending,
+                clientTasks: otherTasks,
+              }),
+            });
+
+            if (otherResponse.ok) {
+              const otherResult = await otherResponse.json();
+
+              otherResult.syncedActionIds.forEach((id: string) => {
+                get().markSynced(id);
+              });
+
+              useFocusStore.setState((state: any) => ({
+                sessions: {
+                  ...state.sessions,
+                  [otherClientId]: otherResult.canonicalSessions,
+                },
+                studentState: {
+                  ...state.studentState,
+                  [otherClientId]: otherResult.canonicalStudentState,
+                },
+              }));
+
+              useSyllabusStore.setState((state: any) => {
+                const otherSubjects = state.subjects[otherClientId] || [];
+                const updatedOtherSubjects = otherSubjects.map((sub: Subject) => ({
+                  ...sub,
+                  chapters: sub.chapters.map((ch: Chapter) => ({
+                    ...ch,
+                    tasks: ch.tasks.map((t: Task) => {
+                      const canonicalTask = otherResult.canonicalTasks[t.id];
+                      return canonicalTask ? { ...canonicalTask } : t;
+                    }),
+                  })),
+                }));
+
+                return {
+                  subjects: {
+                    ...state.subjects,
+                    [otherClientId]: updatedOtherSubjects,
+                  },
+                };
+              });
+            }
+          }
+        } catch (error) {
+          console.warn(`Sync failed for ${clientId} (Offline/Network Error). Resumes safely later:`, error);
         }
       },
     }),
@@ -178,4 +217,3 @@ export const useSyncStore = create<SyncState>()(
     }
   )
 );
-

@@ -81,3 +81,28 @@ export function getShadowStyle(
     elevation,
   };
 }
+
+// Platform-safe Alert dialog wrapper
+export function showAlert(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    alert(`${title}\n\n${message}`);
+  } else {
+    const { Alert } = require('react-native');
+    Alert.alert(title, message);
+  }
+}
+
+// Platform-safe Confirm dialog wrapper
+export function showConfirm(message: string, onConfirm: () => void) {
+  if (Platform.OS === 'web') {
+    if (confirm(message)) {
+      onConfirm();
+    }
+  } else {
+    const { Alert } = require('react-native');
+    Alert.alert('Confirmation', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'OK', onPress: onConfirm },
+    ]);
+  }
+}

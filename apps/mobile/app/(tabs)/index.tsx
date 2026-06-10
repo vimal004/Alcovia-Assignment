@@ -23,10 +23,13 @@ export default function DashboardScreen() {
   const subjects = useSyllabusStore((state) => state.subjects[clientId] || EMPTY_ARRAY);
   const initializeSyllabus = useSyllabusStore((state) => state.initializeIfNeeded);
 
-  // Initialize syllabus seed data if not present
+  // Initialize syllabus seed data if not present and trigger sync
   useEffect(() => {
     initializeSyllabus();
-  }, [clientId]);
+    if (isOnline) {
+      useSyncStore.getState().sync(clientId);
+    }
+  }, [clientId, isOnline]);
 
   const today = new Date().toISOString().split('T')[0];
   const studentState = clientState || {

@@ -1,0 +1,106 @@
+{
+  "name": "Alcovia Focus Streak Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "focus-complete",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        380,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "action": "dedupe",
+        "compare": "selectedFields",
+        "fieldsToCompare": {
+          "fields": [
+            {
+              "fieldName": "eventId"
+            }
+          ]
+        },
+        "options": {
+          "maxScopeSize": 1000
+        }
+      },
+      "id": "deduplicate-event",
+      "name": "Deduplicate Event ID",
+      "type": "n8n-nodes-base.compare",
+      "typeVersion": 1,
+      "position": [
+        600,
+        240
+      ],
+      "notesInFlow": true,
+      "notes": "Ensures exactly-once notification delivery by discarding duplicate session IDs."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/notification-sink",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"studentId\": \"{{ $json.studentId }}\",\n  \"message\": \"{{ $json.message }}\",\n  \"streak\": {{ $json.streak }},\n  \"coinsAwarded\": {{ $json.coinsAwarded }},\n  \"totalCoins\": {{ $json.totalCoins }}\n}",
+        "options": {}
+      },
+      "id": "forward-to-sink",
+      "name": "Forward to Notification Sink",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        820,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Event ID": {
+      "main": [
+        [
+          {
+            "node": "Forward to Notification Sink",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "alcovia-focus-automation",
+  "id": "alcovia-focus-automation",
+  "meta": {
+    "instanceId": "alcovia-takehome-instance"
+  }
+}

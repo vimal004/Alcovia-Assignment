@@ -8,7 +8,7 @@ import { useServerStore } from '../../stores/serverStore';
 import { useM3Theme } from '../../constants/Theme';
 import { DeviceCard } from '../../components/DeviceCard';
 import { AppCard } from '../../components/AppCard';
-import { generateId } from '../../utils/helpers';
+import { generateId, showAlert, showConfirm } from '../../utils/helpers';
 import type { ClientId, FocusSession, Task, Subject, Chapter } from '../../../../packages/shared/types';
 
 const EMPTY_ARRAY: any[] = [];
@@ -75,16 +75,17 @@ export default function DevPanelScreen() {
   };
 
   const handleResetAll = () => {
-    if (confirm('Reset ALL clients and server data to default seed data?')) {
+    showConfirm('Reset ALL clients and server data to default seed data?', () => {
       useFocusStore.getState().resetClient('client-A');
       useFocusStore.getState().resetClient('client-B');
       useSyllabusStore.getState().resetClient('client-A');
       useSyllabusStore.getState().resetClient('client-B');
       clearActions('client-A');
       clearActions('client-B');
-      resetServer();
-      alert('All client and server states have been reset!');
-    }
+      resetServer().then(() => {
+        showAlert('Success', 'All client and server states have been reset!');
+      });
+    });
   };
 
   // Preset Conflict Scenarios
@@ -163,7 +164,7 @@ export default function DevPanelScreen() {
       payload: { session: sessionB }
     });
 
-    alert('Preset Created!\n\nBoth devices are now OFFLINE. Client A has +25 coins pending, Client B has +45 coins pending.\n\nToggle them ONLINE to watch the server reconcile them to a total of +70 coins with a correct streak projection, and trigger webhooks exactly once.');
+    showAlert('Preset Created', 'Both devices are now OFFLINE. Client A has +25 coins pending, Client B has +45 coins pending.\n\nToggle them ONLINE to watch the server reconcile them to a total of +70 coins with a correct streak projection, and trigger webhooks exactly once.');
   };
 
   const triggerTaskPrecedenceConflict = () => {
@@ -216,7 +217,7 @@ export default function DevPanelScreen() {
       payload: { taskId, newStatus: 'in_progress', version: 1 }
     });
 
-    alert('Preset Created!\n\nBoth devices are now OFFLINE.\nClient A set "Linear Equations" to "Done".\nClient B set it to "In Progress".\n\nToggle them ONLINE. The server precedence rule will determine "Done" as the converged state.');
+    showAlert('Preset Created', 'Both devices are now OFFLINE.\nClient A set "Linear Equations" to "Done".\nClient B set it to "In Progress".\n\nToggle them ONLINE. The server precedence rule will determine "Done" as the converged state.');
   };
 
   const triggerTaskDeleteConflict = () => {
@@ -269,7 +270,7 @@ export default function DevPanelScreen() {
       payload: { taskId, newStatus: 'done', version: 1 }
     });
 
-    alert('Preset Created!\n\nBoth devices are now OFFLINE.\nClient A deleted "Quadratic Equations".\nClient B marked it "Done".\n\nToggle them ONLINE. The soft delete rule will ensure that the delete wins and the task remains deleted on both devices.');
+    showAlert('Preset Created', 'Both devices are now OFFLINE.\nClient A deleted "Quadratic Equations".\nClient B marked it "Done".\n\nToggle them ONLINE. The soft delete rule will ensure that the delete wins and the task remains deleted on both devices.');
   };
 
   return (
