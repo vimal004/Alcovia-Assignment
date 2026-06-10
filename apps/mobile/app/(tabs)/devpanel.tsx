@@ -840,7 +840,7 @@ export default function DevPanelScreen() {
         Manage node configurations, trigger offline synchronization conflicts, and monitor active webhook logs.
       </Text>
 
-      {/* Dual Device Simulation Grids */}
+      {/* Device Simulation Grid — Extension 4: Supports 3+ devices */}
       <View style={styles.devicesGrid}>
         <DeviceCard
           clientId="client-A"
@@ -855,6 +855,13 @@ export default function DevPanelScreen() {
           isOnline={isOnlineMap['client-B']}
           onSelect={handleClientChange}
           onToggleOnline={() => handleToggleOnline('client-B')}
+        />
+        <DeviceCard
+          clientId="client-C"
+          activeClientId={clientId}
+          isOnline={isOnlineMap['client-C'] ?? true}
+          onSelect={handleClientChange}
+          onToggleOnline={() => handleToggleOnline('client-C')}
         />
       </View>
 
@@ -1588,6 +1595,7 @@ const styles = StyleSheet.create({
   },
   devicesGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',  // Extension 4: wrap to next row for 3+ devices
     gap: 14,
     width: '100%',
   },

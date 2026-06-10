@@ -5,10 +5,10 @@ import { useM3Theme } from '../constants/Theme';
 import { InteractivePressable } from './InteractivePressable';
 
 interface DeviceCardProps {
-  clientId: 'client-A' | 'client-B';
-  activeClientId: 'client-A' | 'client-B';
+  clientId: 'client-A' | 'client-B' | 'client-C';
+  activeClientId: 'client-A' | 'client-B' | 'client-C';
   isOnline: boolean;
-  onSelect: (id: 'client-A' | 'client-B') => void;
+  onSelect: (id: 'client-A' | 'client-B' | 'client-C') => void;
   onToggleOnline: () => void;
 }
 
@@ -42,7 +42,7 @@ export function DeviceCard({
       <InteractivePressable onPress={() => onSelect(clientId)} style={styles.content} scaleTo={0.98}>
         <View style={styles.headerRow}>
           <Text style={[typography.titleMedium, { color: colors.onSurface }]}>
-            Device {clientId === 'client-A' ? 'A' : 'B'}
+            Device {clientId === 'client-A' ? 'A' : clientId === 'client-B' ? 'B' : 'C'}
           </Text>
           {isActive && (
             <View style={[styles.activePill, { backgroundColor: colors.primary }]}>

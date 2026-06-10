@@ -18,6 +18,7 @@ export interface DatabaseState {
   processedActionIds: Record<string, boolean>;
   n8nWebhookUrl: string;
   n8nLogs: WebhookLog[];
+  lastServerMutationAt?: string;
 }
 
 const DB_FILE = path.join(__dirname, '../db.json');
@@ -137,6 +138,7 @@ export class Database {
       processedActionIds: {},
       n8nWebhookUrl: '',
       n8nLogs: [],
+      lastServerMutationAt: new Date().toISOString(),
     };
   }
 
@@ -172,6 +174,7 @@ export class Database {
     return new Promise((resolve, reject) => {
       dbPromiseChain = dbPromiseChain.then(() => {
         try {
+          state.lastServerMutationAt = new Date().toISOString();
           this.writeStateAtomically(state);
           resolve();
         } catch (error) {
@@ -180,6 +183,7 @@ export class Database {
       });
     });
   }
+
 
   public static async reset(): Promise<DatabaseState> {
     return new Promise((resolve, reject) => {

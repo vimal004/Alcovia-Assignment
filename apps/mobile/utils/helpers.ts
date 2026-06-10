@@ -106,3 +106,28 @@ export function showConfirm(message: string, onConfirm: () => void) {
     ]);
   }
 }
+
+// Partition Zustand persist storage names per client on web to prevent tab state collisions
+export function getPartitionedStorageName(baseName: string): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const clientParam = params.get('client') || params.get('device');
+    let cid = 'client-A';
+    if (clientParam === 'client-B' || clientParam === 'B') cid = 'client-B';
+    if (clientParam === 'client-C' || clientParam === 'C') cid = 'client-C';
+    return `${baseName}-${cid}`;
+  }
+  return baseName;
+}
+
+// Extract ClientId from URL parameters to auto-assign active device on tab launch
+export function getUrlClientId(): 'client-A' | 'client-B' | 'client-C' {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const clientParam = params.get('client') || params.get('device');
+    if (clientParam === 'client-B' || clientParam === 'B') return 'client-B';
+    if (clientParam === 'client-C' || clientParam === 'C') return 'client-C';
+  }
+  return 'client-A';
+}
+

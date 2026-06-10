@@ -1,0 +1,121 @@
+{
+  "name": "Alcovia Focus Streak Automation (n8n-First Prototype)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "focus-complete",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 240],
+      "notes": "Receives focus_session_complete payloads from Express backend"
+    },
+    {
+      "parameters": {
+        "action": "dedupe",
+        "compare": "selectedFields",
+        "fieldsToCompare": {
+          "fields": [
+            {
+              "fieldName": "eventId"
+            }
+          ]
+        },
+        "options": {
+          "maxScopeSize": 1000
+        }
+      },
+      "id": "deduplicate-event",
+      "name": "Deduplicate Event ID",
+      "type": "n8n-nodes-base.compare",
+      "typeVersion": 1,
+      "position": [480, 240],
+      "notesInFlow": true,
+      "notes": "Ensures exactly-once notification delivery by discarding duplicate session IDs. This is n8n's idempotency guarantee layer."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extension 2: n8n-First Prototype\n// This Code node computes the streak/coins reward logic that was later\n// migrated to Express (recalculateStudentState in apps/server/src/index.ts).\n//\n// WHY WE PROTOTYPED HERE:\n// n8n's visual workflow made it easy to iterate on the reward rule quickly\n// without restarting the Express server. We could change the formula, test\n// it against live webhook payloads, and see results instantly in the n8n UI.\n//\n// WHY WE MIGRATED TO EXPRESS:\n// 1. Accuracy: Correct streak calculation needs access to the full session\n//    history (all past dates). n8n receives only the current session payload,\n//    not the full history. Express queries db.json for all sessions.\n// 2. Type safety: Express + TypeScript catches formula errors at compile time.\n//    n8n Code nodes have no type checking.\n// 3. Testability: We can write unit tests for recalculateStudentState().\n//    n8n workflow nodes are hard to unit-test without running n8n.\n// 4. Atomicity: Express computes rewards INSIDE the same db write transaction\n//    as the action replay. In n8n, reward computation would be decoupled,\n//    risking a crash between sync and notification causing lost rewards.\n\nconst session = $json.session;\nconst incomingStreak = $json.streak; // pre-computed by Express, used as fallback\nconst incomingCoins = $json.totalCoins;\n\n// Simplified reward rule (prototype quality - accurate version lives in Express)\n// Coins = targetDuration minutes (1 coin per minute of focused study)\nconst coinsEarned = session.targetDuration;\n\n// Streak: in this prototype we trust the pre-computed streak from Express.\n// A full n8n implementation would need a sub-workflow to query session history.\nconst streak = incomingStreak;\n\nconst message = `\uD83C\uDF1F Focus session complete! +${coinsEarned} coins earned.\\nStreak: ${streak} day${streak !== 1 ? 's' : ''}. Keep it up!`;\n\nreturn {\n  json: {\n    studentId: $json.studentId,\n    session: session,\n    coinsAwarded: coinsEarned,\n    totalCoins: incomingCoins,\n    streak: streak,\n    message: message,\n    computedBy: 'n8n-prototype'\n  }\n};"
+      },
+      "id": "compute-rewards",
+      "name": "Compute Reward Logic (n8n Prototype)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 240],
+      "notesInFlow": true,
+      "notes": "n8n-first: Reward rule implemented here first, then migrated to Express. See DECISIONS.md for migration rationale."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/notification-sink",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"studentId\": \"{{ $json.studentId }}\",\n  \"message\": \"{{ $json.message }}\",\n  \"streak\": {{ $json.streak }},\n  \"coinsAwarded\": {{ $json.coinsAwarded }},\n  \"totalCoins\": {{ $json.totalCoins }},\n  \"computedBy\": \"{{ $json.computedBy }}\"\n}",
+        "options": {}
+      },
+      "id": "forward-to-sink",
+      "name": "Forward to Notification Sink",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [920, 240]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Event ID": {
+      "main": [
+        [
+          {
+            "node": "Compute Reward Logic (n8n Prototype)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Reward Logic (n8n Prototype)": {
+      "main": [
+        [
+          {
+            "node": "Forward to Notification Sink",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "alcovia-focus-automation-extended",
+  "id": "alcovia-focus-automation-extended",
+  "meta": {
+    "instanceId": "alcovia-takehome-instance"
+  }
+}

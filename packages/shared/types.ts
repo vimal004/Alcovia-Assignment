@@ -78,7 +78,9 @@ export interface SyncAction {
 }
 
 // --- Device ---
-export type ClientId = 'client-A' | 'client-B';
+// Extension 4: ClientId extended to support 3+ devices.
+// The server sync API is agnostic to which client posts — any string clientId works.
+export type ClientId = 'client-A' | 'client-B' | 'client-C';
 
 export interface DeviceInfo {
   clientId: ClientId;

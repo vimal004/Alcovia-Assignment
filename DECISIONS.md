@@ -59,3 +59,39 @@ We decided on explicit, deterministic resolution rules to guarantee convergence:
 ### Storage Pruning: Synced Action Garbage Collection
 *   **Decision:** After each successful synchronization, actions that have been marked `synced: true` and are older than 24 hours are deleted from client storage.
 *   **Tradeoff:** Keeping synced actions for 24 hours ensures they remain visible in the Developer Console for easy demoing and troubleshooting, while automated deletion prevents long-term storage bloat in AsyncStorage.
+
+---
+
+## 5. Architectural Decisions for Optional Extensions
+
+We implemented all seven optional extensions to build a resilient, production-ready distributed synchronization system:
+
+### Extension 1: Two-Way Synchronization Loop
+*   **Implementation:** The server exposes `/api/webhook/whatsapp-reply` simulating a WhatsApp reply hook. The server updates the task status, increments the task's logical version clock, and records the `lastServerMutationAt` timestamp.
+*   **Client Polling:** To keep clients updated without complex, stateful SSE/WebSocket connections (which are error-prone during network drops), clients poll the lightweight `/api/pending-mutations?since=...` endpoint every 30 seconds when online. If server mutations are detected, a full synchronization is triggered automatically.
+
+### Extension 2: n8n-First Prototype and Migration
+*   **Visual Prototyping:** We created `n8n-workflow-extended.json` implementing the streak/coins calculation logic inside an n8n Code node. This allowed rapid verification of the business logic before coding.
+*   **Migration Tradeoffs:** As the system matured, we migrated the core logic into the Express backend (`recalculateStudentState` in `src/index.ts`). This was done because:
+    1.  **Completeness:** Streak calculations require full historic session context (which the database has), whereas n8n only receives a single session event payload.
+    2.  **Atomicity:** Running streak calculations in Express makes the database update atomic with the action replay, avoiding race conditions.
+    3.  **Testability:** Business logic in Express can be unit/property-tested directly in code.
+
+### Extension 3: Session Crash Recovery
+*   **Implementation:** Focus sessions are saved on the client with a status of `'running'`. If the app crashes, force-quits, or is reloaded, these sessions could remain stuck.
+*   **Startup Verification:** On app mount, `recoverStaleSessions()` in `focusStore.ts` checks for any session stuck in `'running'` status for more than 10 minutes and transitions them to `'failed'` with fail reason `'app_switch'`. This ensures metrics are accurate and the UI stays consistent.
+
+### Extension 4: Support for 3+ Devices
+*   **Implementation:** Extended `ClientId` type to include `'client-C'`. Updated `deviceStore.ts` and `devpanel.tsx` to support Device C. The backend's action replay engine is completely device-agnostic, easily supporting scaling to $N$ devices.
+
+### Extension 5: Connection Drop Recovery with Exponential Backoff
+*   **Implementation:** If a sync request fails due to a network error, the client schedules an automatic retry.
+*   **Backoff Schedule:** Retries are scheduled at 2s, 4s, and then 8s. If all three retries fail, scheduling is paused until the next online state toggle or user-initiated sync event to conserve resource cycles.
+
+### Extension 6: Efficient Delta Synchronization
+*   **Implementation:** Each device tracks its `lastSyncedAt` timestamp. During sync, the client sends this timestamp. The server returns only tasks whose `updatedAt` is greater than or equal to `lastSyncedAt` (as `changedTasks`), falling back to full `canonicalTasks` only for first-time synchronization.
+*   **Merging:** The client merges only the modified task patch into its local memory rather than replacing the entire syllabus tree, preventing unnecessary UI re-renders.
+
+### Extension 7: Property / Fuzz Convergence Test
+*   **Implementation:** Created a self-contained test file `apps/server/src/__tests__/convergence.test.ts` running 100 fuzz iterations.
+*   **Verification:** Generates random offline action sequences on multiple virtual devices, shuffles the order of execution, and asserts that the final state converges deterministically regardless of processing order. Also checks idempotency (processing duplicate logs does not change the result).

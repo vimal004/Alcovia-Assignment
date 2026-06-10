@@ -52,22 +52,28 @@ Open the n8n dashboard (usually at `http://localhost:5678`).
 
 ---
 
-## 3. How to Test the App (Two-Device Setup)
+## 3. How to Test the App (3+ Device Setup)
 
-To verify the offline-first sync engine and conflict resolution, you need to simulate two devices (**Device A** and **Device B**). You can do this in two ways:
+To verify the offline-first sync engine and conflict resolution across multiple devices, you can simulate three devices (**Device A**, **Device B**, and **Device C**). We support two testing methodologies:
 
-### Option A: Side-by-Side Browser Tabs (Manual Testing)
-Since Expo Web saves client identity and action queues in the browser's Local Storage, two tabs in the same browser window will share state. To isolate them:
+### Option A: Side-by-Side Browser Tabs (Isolated Storage Namespaces)
+We have implemented **URL-based storage partitioning**. By appending `?device=A`, `?device=B`, or `?device=C` to the app URL, the tabs will automatically set their active client ID and completely partition their local storage (AsyncStorage) namespace. This allows you to test multiple devices in the same browser window side-by-side without state collisions:
 
-1. **Open Tab 1 (Normal Window):** Go to `http://localhost:8081` (or your Expo web URL). By default, this is **Device A** (`client-A`).
-2. **Open Tab 2 (Incognito/Private Window):** Go to the same URL, navigate to the **Dev Panel** tab, and tap **Device B** (`client-B`) to set it as active.
-3. You now have two isolated clients! Toggle them **Offline** using their respective cards in the Dev Panel, make conflicting edits on both tabs, toggle them **Online**, and watch them automatically sync and converge.
+1. **Device A (Tab 1):** Open `http://localhost:8081/?device=A` in a browser tab.
+2. **Device B (Tab 2):** Open `http://localhost:8081/?device=B` in a second tab.
+3. **Device C (Tab 3):** Open `http://localhost:8081/?device=C` in a third tab.
+4. **Offline Sync Demo:**
+   * Go to the **Dev Panel** in each tab. You will see that each tab correctly identifies as Device A, B, or C.
+   * Toggle **Device A** and **Device B** offline using their online toggles.
+   * Modify tasks or complete focus blocks on both offline tabs.
+   * Toggle them online again and watch the changes reconcile instantly and automatically propagate to all online tabs (like Device C) via the background polling system.
 
 ### Option B: Using Dev Panel Presets (Single Tab Simulation)
-If you prefer not to manage multiple browser windows/incognito tabs, you can run all conflict scenarios within a single tab:
+If you prefer not to open multiple tabs, you can simulate multi-device synchronization from within a single tab:
 1. Navigate to the **Dev Panel** in the app.
-2. Under **Custom Presets** or **Premade Scenarios**, click any scenario button.
-3. The Dev Panel will automatically trigger offline changes for both **Device A** and **Device B** in memory and synchronize them to showcase deterministic state convergence instantly.
+2. Under **Custom Presets** or **Pre-made Presets**, click any scenario button (e.g., *Task Delete vs Edit Conflict*).
+3. The app will simulate offline edits on other devices and replay them chronologically, letting you watch state reconciliation directly in the **Real-time Synchronization Grid**.
+
 
 ---
 

@@ -3,6 +3,9 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { useFocusStore } from '@/stores/focusStore';
+import { useSyncStore } from '@/stores/syncStore';
+import { useDeviceStore } from '@/stores/deviceStore';
 
 import { useColorScheme } from '@/components/useColorScheme';
 
@@ -74,6 +77,26 @@ const M3DarkTheme = {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const recoverStaleSessions = useFocusStore((state) => state.recoverStaleSessions);
+  const pollPendingMutations = useSyncStore((state) => state.pollPendingMutations);
+  const clientId = useDeviceStore((state) => state.clientId);
+
+  // Extension 3: Crash Recovery — auto-fail any sessions stuck in 'running'
+  // state from a previous crash, force-quit, or tab reload.
+  useEffect(() => {
+    recoverStaleSessions();
+  }, []);
+
+  // Extension 1: Two-Way Loop polling — every 2s check for server-initiated
+  // mutations (e.g., WhatsApp reply or actions from another tab). If found, triggers
+  // a delta sync to pull down the updated state automatically.
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 2_000;
+    const interval = setInterval(() => {
+      pollPendingMutations(clientId);
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [clientId]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? M3DarkTheme : M3LightTheme}>

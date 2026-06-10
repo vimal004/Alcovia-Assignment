@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SyncAction, SyncActionType, ClientId, Subject, Chapter, Task } from '../../../packages/shared/types';
-import { generateId } from '../utils/helpers';
+import { generateId, getPartitionedStorageName } from '../utils/helpers';
 import { useDeviceStore } from './deviceStore';
 import { useServerStore } from './serverStore';
 import { Platform } from 'react-native';
@@ -22,9 +22,17 @@ interface SyncState {
   clearActions: (clientId: string) => void;
   pruneSyncedActions: () => void;
   sync: (clientId: ClientId) => Promise<void>;
+  // Extension 1: Two-way loop — poll server for out-of-band mutations
+  pollPendingMutations: (clientId: ClientId) => Promise<void>;
 }
 
 const SERVER_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
+
+// Extension 5: Retry backoff state (per-client, not persisted — reset on app restart)
+const retryTimeouts: Partial<Record<ClientId, ReturnType<typeof setTimeout>>> = {};
+const RETRY_DELAYS_MS = [2000, 4000, 8000]; // exponential backoff delays
+const retryAttempts: Partial<Record<ClientId, number>> = {};
+
 
 export const useSyncStore = create<SyncState>()(
   persist(
@@ -90,8 +98,14 @@ export const useSyncStore = create<SyncState>()(
         const { useFocusStore } = require('./focusStore');
         const { useSyllabusStore } = require('./syllabusStore');
 
-        const { isOnline, packetLoss, latencyMs } = useDeviceStore.getState();
+        const { isOnline, packetLoss, latencyMs, lastSyncedAt, setLastSyncedAt } = useDeviceStore.getState();
         if (!isOnline[clientId]) return;
+
+        // Extension 5: Cancel any pending retry for this client (manual sync supersedes)
+        if (retryTimeouts[clientId]) {
+          clearTimeout(retryTimeouts[clientId]);
+          delete retryTimeouts[clientId];
+        }
 
         const pendingActions = get().getPendingActions(clientId);
         const clientTasks = useSyllabusStore.getState().subjects[clientId] || [];
@@ -112,6 +126,9 @@ export const useSyncStore = create<SyncState>()(
             await new Promise((resolve) => setTimeout(resolve, latencyMs));
           }
 
+          // Extension 6: Delta sync — send lastSyncedAt so server returns only changed tasks
+          const clientLastSyncedAt = lastSyncedAt?.[clientId] ?? null;
+
           // Send actions to Express API
           const response = await fetch(`${SERVER_URL}/api/sync`, {
             method: 'POST',
@@ -121,6 +138,7 @@ export const useSyncStore = create<SyncState>()(
               clientActions: pendingActions,
               clientTasks,
               timezone,
+              lastSyncedAt: clientLastSyncedAt, // Extension 6: delta sync
             }),
           });
 
@@ -129,6 +147,12 @@ export const useSyncStore = create<SyncState>()(
           }
 
           const result = await response.json();
+
+          // Extension 5: Successful sync — reset retry counter
+          delete retryAttempts[clientId];
+
+          // Extension 6: Record successful sync timestamp for delta sync on next call
+          setLastSyncedAt(clientId, new Date().toISOString());
 
           // Mark local actions as synced based on what the server processed successfully
           result.syncedActionIds.forEach((id: string) => {
@@ -150,15 +174,18 @@ export const useSyncStore = create<SyncState>()(
             },
           }));
 
-          // 2. Sync Syllabus Tasks on client
+          // 2. Extension 6: Merge delta task changes instead of replacing full state
           useSyllabusStore.setState((state: any) => {
             const clientSubjects = state.subjects[clientId] || [];
+            // changedTasks contains only tasks modified since lastSyncedAt (delta)
+            // canonicalTasks is full set (fallback on first sync)
+            const taskPatch: Record<string, Task> = result.changedTasks || result.canonicalTasks || {};
             const updatedSubjects = clientSubjects.map((sub: Subject) => ({
               ...sub,
               chapters: sub.chapters.map((ch: Chapter) => ({
                 ...ch,
                 tasks: ch.tasks.map((t: Task) => {
-                  const canonicalTask = result.canonicalTasks[t.id];
+                  const canonicalTask = taskPatch[t.id];
                   return canonicalTask ? { ...canonicalTask } : t;
                 }),
               })),
@@ -244,11 +271,66 @@ export const useSyncStore = create<SyncState>()(
           }
         } catch (error) {
           console.warn(`Sync failed for ${clientId} (Offline/Network Error). Resumes safely later:`, error);
+
+          // Extension 5: Exponential backoff retry
+          // Schedule a retry at 2s -> 4s -> 8s. After 3 attempts, stop and wait
+          // for user action (next online toggle or explicit sync call).
+          const attempt = retryAttempts[clientId] ?? 0;
+          if (attempt < RETRY_DELAYS_MS.length) {
+            const delay = RETRY_DELAYS_MS[attempt];
+            retryAttempts[clientId] = attempt + 1;
+            console.log(`[RetryBackoff] Scheduling retry ${attempt + 1}/${RETRY_DELAYS_MS.length} for ${clientId} in ${delay}ms`);
+            retryTimeouts[clientId] = setTimeout(() => {
+              const { isOnline } = useDeviceStore.getState();
+              if (isOnline[clientId]) {
+                get().sync(clientId);
+              }
+            }, delay);
+          } else {
+            console.warn(`[RetryBackoff] Max retries reached for ${clientId}. Will retry on next manual sync.`);
+            delete retryAttempts[clientId];
+          }
+        }
+      },
+
+      // Extension 1: Two-Way Loop — Poll for Server-Initiated Mutations
+      // When a WhatsApp reply (or any out-of-band event) triggers the
+      // /api/webhook/whatsapp-reply endpoint, the server mutates task state
+      // directly in the DB. Clients won’t see these changes unless they either
+      // run a full sync or poll this lightweight endpoint.
+      //
+      // This is a pull-based approach to the two-way loop:
+      // Instead of SSE (which requires persistent connections), clients poll
+      // /api/pending-mutations every 30s while online and trigger a sync if
+      // any tasks have changed since their last sync. Lightweight and offline-safe.
+      pollPendingMutations: async (clientId: ClientId) => {
+        const { isOnline, lastSyncedAt } = useDeviceStore.getState();
+        if (!isOnline[clientId]) return;
+
+        try {
+          const since = lastSyncedAt?.[clientId];
+          const url = since
+            ? `${SERVER_URL}/api/pending-mutations?since=${encodeURIComponent(since)}`
+            : `${SERVER_URL}/api/pending-mutations`;
+
+          const response = await fetch(url);
+          if (!response.ok) return;
+
+          const { hasMutations, mutatedTasks } = await response.json();
+
+          if (hasMutations || (mutatedTasks && mutatedTasks.length > 0)) {
+            // Server has new mutations not yet seen by this client — trigger a sync
+            console.log(`[TwoWayLoop] Detected server-side state mutation for ${clientId}. Triggering sync.`);
+            get().sync(clientId);
+          }
+        } catch (err) {
+          // Polling errors are non-fatal — next poll will retry
+          console.warn('[TwoWayLoop] Poll failed (non-fatal):', err);
         }
       },
     }),
     {
-      name: 'alcovia-sync-store',
+      name: getPartitionedStorageName('alcovia-sync-store'),
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

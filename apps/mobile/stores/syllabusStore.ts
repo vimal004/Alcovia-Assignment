@@ -5,7 +5,7 @@ import type { Subject, Chapter, Task, TaskStatus } from '../../../packages/share
 import { generateSeedData } from '../utils/seedData';
 import { useDeviceStore } from './deviceStore';
 import { useSyncStore } from './syncStore';
-import { generateId } from '../utils/helpers';
+import { generateId, getPartitionedStorageName } from '../utils/helpers';
 
 interface SyllabusState {
   // Per-client data
@@ -173,7 +173,7 @@ export const useSyllabusStore = create<SyllabusState>()(
       },
     }),
     {
-      name: 'alcovia-syllabus-store',
+      name: getPartitionedStorageName('alcovia-syllabus-store'),
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

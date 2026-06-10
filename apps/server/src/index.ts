@@ -167,9 +167,11 @@ app.post('/api/notification-sink', async (req, res) => {
 // Synchronize Client Actions & Conflicts Reconciler
 app.post('/api/sync', async (req, res) => {
   try {
-    const { clientId, clientActions, clientTasks, timezone } = req.body;
+    const { clientId, clientActions, clientTasks, timezone, lastSyncedAt } = req.body;
     const clientTimezone = timezone || 'UTC';
     const today = getLocalDateString(new Date(), clientTimezone);
+    // Extension 6: Delta sync — track what timestamp the client last synced from
+    const clientLastSyncedAt: string | null = lastSyncedAt || null;
 
     // Read current database state
     const state = await Database.read();
@@ -343,6 +345,20 @@ app.post('/api/sync', async (req, res) => {
     // Finalize state calculations
     const finalStudentState = recalculateStudentState(updatedSessions, today, clientTimezone);
 
+    // Extension 6: Compute changedTasks delta — only tasks updated since client's last sync.
+    // On first sync (lastSyncedAt is null), we send the full canonical task set.
+    const syncedAt = new Date().toISOString();
+    let changedTasks: Record<string, typeof updatedTasks[string]> | null = null;
+    if (clientLastSyncedAt) {
+      const sinceMs = new Date(clientLastSyncedAt).getTime();
+      changedTasks = {};
+      for (const [id, task] of Object.entries(updatedTasks)) {
+        if (new Date(task.updatedAt).getTime() >= sinceMs) {
+          changedTasks[id] = task;
+        }
+      }
+    }
+
     // Save back to DB
     state.tasks = updatedTasks;
     state.sessions = updatedSessions;
@@ -354,9 +370,11 @@ app.post('/api/sync', async (req, res) => {
 
     res.json({
       syncedActionIds,
-      canonicalTasks: updatedTasks,
+      canonicalTasks: updatedTasks,         // Full state (always returned for backward compat)
+      changedTasks,                         // Extension 6: Delta — null means use canonicalTasks
       canonicalSessions: updatedSessions,
       canonicalStudentState: finalStudentState,
+      syncedAt,                             // Extension 6: Timestamp client should store as lastSyncedAt
     });
   } catch (error) {
     console.error('Reconciliation sync error:', error);
@@ -364,6 +382,8 @@ app.post('/api/sync', async (req, res) => {
   }
 });
 
+// Extension 1 (Two-Way Loop): The whatsapp-reply endpoint now also records
+// the mutation timestamp so clients can detect server-initiated changes via polling.
 // Extension: Optional Two-Way Loop Webhook (Allowing WhatsApp notifications to hit the backend to snooze or complete tasks)
 app.post('/api/webhook/whatsapp-reply', async (req, res) => {
   try {
@@ -395,6 +415,8 @@ app.post('/api/webhook/whatsapp-reply', async (req, res) => {
     }
 
     if (updated) {
+      // Extension 1: Track server-mutation timestamp for client polling
+      (state as any).lastServerMutationAt = new Date().toISOString();
       await Database.write(state);
       console.log(`💬 [Two-Way Loop Event]: Modified task ${taskId} via webhook payload to ${dbTask.status}`);
       return res.json({ status: 'ok', message: `Task status updated to ${dbTask.status}`, task: dbTask });
@@ -403,6 +425,50 @@ app.post('/api/webhook/whatsapp-reply', async (req, res) => {
     res.json({ status: 'ignored', message: 'Reply command unhandled' });
   } catch (error) {
     res.status(500).json({ error: 'Two-way loop engine failed' });
+  }
+});
+
+// Extension 1: /api/pending-mutations — Delta endpoint for two-way loop pull.
+// Clients call this while online to detect server-initiated changes (e.g., WhatsApp replies, focus session completes on other tabs).
+// Returns hasMutations: true if any server-side change occurred since the client's last sync.
+app.get('/api/pending-mutations', async (req, res) => {
+  try {
+    const since = req.query.since as string | undefined;
+    const state = await Database.read();
+
+    const lastServerMutationAt = state.lastServerMutationAt || null;
+    let hasMutations = false;
+    let mutatedTasks: any[] = [];
+
+    if (since) {
+      const sinceMs = new Date(since).getTime();
+      
+      // 1. Compare database-wide mutation timestamp with client's sync timestamp
+      if (lastServerMutationAt) {
+        const lastMs = new Date(lastServerMutationAt).getTime();
+        // Allow a small 100ms tolerance to prevent clock drift issues
+        if (lastMs > sinceMs + 100) {
+          hasMutations = true;
+        }
+      }
+      
+      // 2. Fallback: check if any tasks have an updatedAt newer than since
+      mutatedTasks = Object.values(state.tasks).filter(
+        (task) => new Date(task.updatedAt).getTime() > sinceMs
+      );
+      if (mutatedTasks.length > 0) {
+        hasMutations = true;
+      }
+    }
+
+    res.json({
+      hasMutations,
+      mutatedTasks,
+      serverMutationAt: lastServerMutationAt,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check pending mutations' });
   }
 });
 
