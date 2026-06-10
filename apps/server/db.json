@@ -1,0 +1,340 @@
+{
+  "tasks": {
+    "task-m1-1": {
+      "id": "task-m1-1",
+      "chapterId": "ch-math-1",
+      "title": "Linear Equations",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m1-2": {
+      "id": "task-m1-2",
+      "chapterId": "ch-math-1",
+      "title": "Quadratic Equations",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m1-3": {
+      "id": "task-m1-3",
+      "chapterId": "ch-math-1",
+      "title": "Polynomials",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m1-4": {
+      "id": "task-m1-4",
+      "chapterId": "ch-math-1",
+      "title": "Factorization",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m2-1": {
+      "id": "task-m2-1",
+      "chapterId": "ch-math-2",
+      "title": "Triangles",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m2-2": {
+      "id": "task-m2-2",
+      "chapterId": "ch-math-2",
+      "title": "Circles",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m2-3": {
+      "id": "task-m2-3",
+      "chapterId": "ch-math-2",
+      "title": "Coordinate Geometry",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m2-4": {
+      "id": "task-m2-4",
+      "chapterId": "ch-math-2",
+      "title": "Surface Area & Volume",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m3-1": {
+      "id": "task-m3-1",
+      "chapterId": "ch-math-3",
+      "title": "Limits",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m3-2": {
+      "id": "task-m3-2",
+      "chapterId": "ch-math-3",
+      "title": "Derivatives",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m3-3": {
+      "id": "task-m3-3",
+      "chapterId": "ch-math-3",
+      "title": "Integration",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-m3-4": {
+      "id": "task-m3-4",
+      "chapterId": "ch-math-3",
+      "title": "Applications of Derivatives",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p1-1": {
+      "id": "task-p1-1",
+      "chapterId": "ch-phys-1",
+      "title": "Newton's Laws",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p1-2": {
+      "id": "task-p1-2",
+      "chapterId": "ch-phys-1",
+      "title": "Work & Energy",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p1-3": {
+      "id": "task-p1-3",
+      "chapterId": "ch-phys-1",
+      "title": "Momentum",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p1-4": {
+      "id": "task-p1-4",
+      "chapterId": "ch-phys-1",
+      "title": "Gravitation",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p2-1": {
+      "id": "task-p2-1",
+      "chapterId": "ch-phys-2",
+      "title": "Heat Transfer",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p2-2": {
+      "id": "task-p2-2",
+      "chapterId": "ch-phys-2",
+      "title": "Laws of Thermodynamics",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p2-3": {
+      "id": "task-p2-3",
+      "chapterId": "ch-phys-2",
+      "title": "Entropy",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p2-4": {
+      "id": "task-p2-4",
+      "chapterId": "ch-phys-2",
+      "title": "Thermal Expansion",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p3-1": {
+      "id": "task-p3-1",
+      "chapterId": "ch-phys-3",
+      "title": "Reflection",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p3-2": {
+      "id": "task-p3-2",
+      "chapterId": "ch-phys-3",
+      "title": "Refraction",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p3-3": {
+      "id": "task-p3-3",
+      "chapterId": "ch-phys-3",
+      "title": "Lenses",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-p3-4": {
+      "id": "task-p3-4",
+      "chapterId": "ch-phys-3",
+      "title": "Wave Optics",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c1-1": {
+      "id": "task-c1-1",
+      "chapterId": "ch-chem-1",
+      "title": "Hydrocarbons",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c1-2": {
+      "id": "task-c1-2",
+      "chapterId": "ch-chem-1",
+      "title": "Alcohols & Phenols",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c1-3": {
+      "id": "task-c1-3",
+      "chapterId": "ch-chem-1",
+      "title": "Aldehydes & Ketones",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c1-4": {
+      "id": "task-c1-4",
+      "chapterId": "ch-chem-1",
+      "title": "Carboxylic Acids",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c2-1": {
+      "id": "task-c2-1",
+      "chapterId": "ch-chem-2",
+      "title": "Periodic Table",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c2-2": {
+      "id": "task-c2-2",
+      "chapterId": "ch-chem-2",
+      "title": "Chemical Bonding",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c2-3": {
+      "id": "task-c2-3",
+      "chapterId": "ch-chem-2",
+      "title": "Coordination Compounds",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c2-4": {
+      "id": "task-c2-4",
+      "chapterId": "ch-chem-2",
+      "title": "d-Block Elements",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c3-1": {
+      "id": "task-c3-1",
+      "chapterId": "ch-chem-3",
+      "title": "Electrochemistry",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c3-2": {
+      "id": "task-c3-2",
+      "chapterId": "ch-chem-3",
+      "title": "Chemical Kinetics",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c3-3": {
+      "id": "task-c3-3",
+      "chapterId": "ch-chem-3",
+      "title": "Solutions",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    },
+    "task-c3-4": {
+      "id": "task-c3-4",
+      "chapterId": "ch-chem-3",
+      "title": "Equilibrium",
+      "status": "not_started",
+      "updatedAt": "2026-06-10T12:09:10.225Z",
+      "version": 0,
+      "deleted": false
+    }
+  },
+  "sessions": [],
+  "studentState": {
+    "studentId": "student-001",
+    "coins": 0,
+    "streak": 0,
+    "lastStreakDate": null,
+    "todayFocusMinutes": 0,
+    "todayDate": "2026-06-10"
+  },
+  "processedActionIds": {},
+  "n8nWebhookUrl": "",
+  "n8nLogs": []
+}

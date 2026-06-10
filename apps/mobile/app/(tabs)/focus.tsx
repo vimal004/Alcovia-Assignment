@@ -37,12 +37,28 @@ export default function FocusScreen() {
   useEffect(() => {
     const active = getActiveSession();
     if (active) {
-      setRunningSessionId(active.id);
-      const elapsed = Math.floor((Date.now() - new Date(active.startedAt).getTime()) / 1000);
-      const targetSecs = active.targetDuration * 60;
-      const remaining = Math.max(0, targetSecs - elapsed);
-      setRemainingSeconds(remaining);
-      setTotalSeconds(targetSecs);
+      const lastTick = active.lastHeartbeatAt
+        ? new Date(active.lastHeartbeatAt).getTime()
+        : new Date(active.startedAt).getTime();
+      const elapsedSinceLastTick = Date.now() - lastTick;
+
+      if (elapsedSinceLastTick > GRACE_PERIOD_MS) {
+        // Retroactively fail if inactive for longer than the grace period (e.g. app terminated/killed)
+        failSession(active.id, 'app_switch');
+        setAlertState({
+          title: 'Session Interrupted',
+          message: 'Focus session interrupted because you closed the app or left it running in the background for more than 5 seconds.',
+          type: 'failure',
+        });
+        resetTimerState();
+      } else {
+        setRunningSessionId(active.id);
+        const elapsed = Math.floor((Date.now() - new Date(active.startedAt).getTime()) / 1000);
+        const targetSecs = active.targetDuration * 60;
+        const remaining = Math.max(0, targetSecs - elapsed);
+        setRemainingSeconds(remaining);
+        setTotalSeconds(targetSecs);
+      }
     }
   }, []);
 
@@ -51,6 +67,8 @@ export default function FocusScreen() {
     if (runningSessionId && remainingSeconds > 0) {
       timerRef.current = setInterval(() => {
         setRemainingSeconds((prev) => Math.max(0, prev - 1));
+        // Record active heartbeat
+        useFocusStore.getState().updateHeartbeat(runningSessionId);
       }, 1000);
     }
 

@@ -20,6 +20,7 @@ export interface FocusSession {
   failReason: FailReason | null;
   coinsEarned: number;
   version: number;         // logical clock for sync
+  lastHeartbeatAt?: string; // ISO timestamp of last active heartbeat
 }
 
 // --- Syllabus ---

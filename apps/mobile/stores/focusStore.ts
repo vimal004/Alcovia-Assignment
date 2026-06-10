@@ -15,6 +15,7 @@ interface FocusState {
   startSession: (targetDuration: number) => string;
   completeSession: (sessionId: string) => void;
   failSession: (sessionId: string, reason: 'give_up' | 'app_switch') => void;
+  updateHeartbeat: (sessionId: string) => void;
   getActiveSession: () => FocusSession | null;
   getCurrentState: () => StudentState;
   getSessions: () => FocusSession[];
@@ -156,6 +157,26 @@ export const useFocusStore = create<FocusState>()(
               payload: { session: { ...session } },
             });
           }
+
+          return {
+            sessions: { ...state.sessions, [clientId]: clientSessions },
+          };
+        });
+      },
+
+      updateHeartbeat: (sessionId: string) => {
+        const { clientId } = useDeviceStore.getState();
+
+        set((state) => {
+          const clientSessions = (state.sessions[clientId] || []).map((s) => {
+            if (s.id === sessionId && s.status === 'running') {
+              return {
+                ...s,
+                lastHeartbeatAt: new Date().toISOString(),
+              };
+            }
+            return s;
+          });
 
           return {
             sessions: { ...state.sessions, [clientId]: clientSessions },
