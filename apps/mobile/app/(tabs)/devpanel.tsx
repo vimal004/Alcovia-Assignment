@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, TextInput } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useDeviceStore } from '../../stores/deviceStore';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useAnimatedStyle, withTiming, useSharedValue, withSpring } from 'react-native-reanimated';
 import { InteractivePressable } from '../../components/InteractivePressable';
 import { useFocusStore } from '../../stores/focusStore';
 import { useSyllabusStore } from '../../stores/syllabusStore';
@@ -50,6 +50,10 @@ export default function DevPanelScreen() {
   const [inspectOpen, setInspectOpen] = useState(true);
   const [logsOpen, setLogsOpen] = useState(true);
   const [presetsOpen, setPresetsOpen] = useState(true);
+  const [networkOpen, setNetworkOpen] = useState(true);
+  const [injectorOpen, setInjectorOpen] = useState(true);
+  const [showFocusConfig, setShowFocusConfig] = useState(false);
+  const [showTaskConfig, setShowTaskConfig] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [alertModal, setAlertModal] = useState<{ title: string; message: string; type: 'success' | 'failure' } | null>(null);
 
@@ -795,6 +799,34 @@ export default function DevPanelScreen() {
     );
   };
 
+  const InfoButton = ({ onPress }: { onPress: () => void }) => {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: colors.primaryContainer,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <Text style={{ color: colors.onPrimaryContainer, fontSize: 10, fontWeight: '900', lineHeight: 14 }}>i</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const showTheoryModal = (title: string, theory: string, what: string, why: string, how: string) => {
+    setAlertModal({
+      title: `Theory: ${theory}`,
+      message: `SCENARIO:\n${title}\n\nWHAT IT DOES:\n${what}\n\nWHY CHOSEN:\n${why}\n\nHOW IT WORKS:\n${how}`,
+      type: 'success',
+    });
+  };
+
   return (
     <Animated.View
       entering={FadeIn.duration(250)}
@@ -841,370 +873,213 @@ export default function DevPanelScreen() {
 
         {presetsOpen && (
           <View style={styles.presetBody}>
-            {/* Network Profile & Outage Simulator */}
-            <View style={{ marginBottom: 12, padding: 12, backgroundColor: isDark ? '#26232A' : '#FAF6FF', borderRadius: shapes.m, borderWidth: 1, borderColor: colors.outlineVariant }}>
-              <Text style={[typography.titleSmall, { color: colors.primary, fontWeight: '800', marginBottom: 8 }]}>
-                Network Profile & Outage Simulator
-              </Text>
-              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginBottom: 12, lineHeight: 16 }]}>
-                Select a network profile to simulate network conditions, or trigger a temporary outage window.
-              </Text>
-
-              {/* Profiles Row */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                {[
-                  { name: 'Fiber', latency: 0, loss: false, label: 'Fiber (0ms / 0%)' },
-                  { name: '4G LTE', latency: 150, loss: false, label: '4G (150ms)' },
-                  { name: 'Slow 3G', latency: 800, loss: false, label: '3G (800ms)' },
-                  { name: 'Transit', latency: 2000, loss: true, label: 'Subway (2s / Loss)' },
-                  { name: 'Blackout', latency: 0, loss: true, label: 'Blackout (Offline)' },
-                ].map((prof) => {
-                  const isActive = latencyMs === prof.latency && packetLoss === prof.loss;
-                  return (
-                    <TouchableOpacity
-                      key={prof.name}
-                      onPress={() => applyNetworkProfile(prof.latency, prof.loss)}
-                      style={{
-                        paddingVertical: 6,
-                        paddingHorizontal: 10,
-                        borderRadius: shapes.s,
-                        borderWidth: 1.5,
-                        borderColor: isActive ? colors.primary : colors.outlineVariant,
-                        backgroundColor: isActive ? colors.primaryContainer : colors.surface,
-                      }}
-                    >
-                      <Text style={{ color: isActive ? colors.onPrimaryContainer : colors.onSurfaceVariant, fontSize: 11, fontWeight: '700' }}>
-                        {prof.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Outage Simulation Trigger Row */}
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: colors.surface, padding: 10, borderRadius: shapes.s, borderWidth: 1, borderColor: colors.outlineVariant, marginBottom: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, fontWeight: '700' }]}>
-                    Temporary Outage Window
-                  </Text>
-                  {outageSecondsLeft !== null ? (
-                    <Text style={[typography.bodySmall, { color: colors.error, fontWeight: '800', marginTop: 2 }]}>
-                      Auto-reconnecting in {outageSecondsLeft}s...
-                    </Text>
-                  ) : (
-                    <Text style={[typography.bodySmall, { color: colors.outline, marginTop: 2 }]}>
-                      Simulate network dropping and auto-reconnecting.
-                    </Text>
-                  )}
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  <TouchableOpacity
-                    onPress={() => triggerOutageSimulation(10)}
-                    disabled={outageSecondsLeft !== null}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 12,
-                      borderRadius: shapes.s,
-                      backgroundColor: outageSecondsLeft !== null ? colors.surfaceVariant : colors.error,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: outageSecondsLeft !== null ? colors.outline : colors.onError, fontSize: 11, fontWeight: '700' }}>
-                      10s Drop
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  {outageSecondsLeft !== null && (
-                    <TouchableOpacity
-                      onPress={() => setOutageSecondsLeft(null)}
-                      style={{
-                        paddingVertical: 8,
-                        paddingHorizontal: 12,
-                        borderRadius: shapes.s,
-                        backgroundColor: colors.surfaceVariant,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ color: colors.onSurfaceVariant, fontSize: 11, fontWeight: '700' }}>
-                        Cancel
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {/* Raw Simulator Params (Advanced overrides collapsible/inline) */}
-              <View style={{ borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: 10, flexDirection: 'row', gap: 12 }}>
-                <View style={{ flex: 1.5 }}>
-                  <Text style={[typography.labelMedium, { color: colors.outline, marginBottom: 4 }]}>Raw Latency Override</Text>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {[0, 1000, 3000].map((lat) => (
-                      <TouchableOpacity
-                        key={lat}
-                        onPress={() => setLatencyMs(lat)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 6,
-                          borderRadius: shapes.xs,
-                          alignItems: 'center',
-                          backgroundColor: latencyMs === lat ? colors.primary : colors.surfaceVariant,
-                        }}
-                      >
-                        <Text style={{ color: latencyMs === lat ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 10, fontWeight: '700' }}>
-                          {lat === 0 ? '0ms' : `${lat / 1000}s`}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.outline, marginBottom: 4 }]}>Raw Packet Loss</Text>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {[false, true].map((val) => (
-                      <TouchableOpacity
-                        key={String(val)}
-                        onPress={() => setPacketLoss(val)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 6,
-                          borderRadius: shapes.xs,
-                          alignItems: 'center',
-                          backgroundColor: packetLoss === val ? colors.primary : colors.surfaceVariant,
-                        }}
-                      >
-                        <Text style={{ color: packetLoss === val ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 10, fontWeight: '700' }}>
-                          {val ? 'On' : 'Off'}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* State & Metrics Overrides Panel */}
-            <View style={{ marginBottom: 12, padding: 12, backgroundColor: isDark ? '#26232A' : '#FAF6FF', borderRadius: shapes.m, borderWidth: 1, borderColor: colors.outlineVariant }}>
-              <Text style={[typography.titleSmall, { color: colors.primary, fontWeight: '800', marginBottom: 12 }]}>
-                Student Metrics Injector (State Overrides)
-              </Text>
-              
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <View style={{ flex: 1, gap: 8 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface }]}>Device A Override</Text>
-                  <TextInput
-                    style={[styles.webhookInput, { height: 34, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    placeholder="Coins"
-                    keyboardType="numeric"
-                    value={overrideCoinsA}
-                    onChangeText={setOverrideCoinsA}
-                  />
-                  <TextInput
-                    style={[styles.webhookInput, { height: 34, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    placeholder="Streak Days"
-                    keyboardType="numeric"
-                    value={overrideStreakA}
-                    onChangeText={setOverrideStreakA}
-                  />
-                  <TouchableOpacity
-                    onPress={handleOverrideA}
-                    style={{
-                      paddingVertical: 8,
-                      borderRadius: shapes.s,
-                      backgroundColor: colors.primaryContainer,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: colors.onPrimaryContainer, fontWeight: '700', fontSize: 11 }}>Inject Device A</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={{ flex: 1, gap: 8 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface }]}>Device B Override</Text>
-                  <TextInput
-                    style={[styles.webhookInput, { height: 34, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    placeholder="Coins"
-                    keyboardType="numeric"
-                    value={overrideCoinsB}
-                    onChangeText={setOverrideCoinsB}
-                  />
-                  <TextInput
-                    style={[styles.webhookInput, { height: 34, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    placeholder="Streak Days"
-                    keyboardType="numeric"
-                    value={overrideStreakB}
-                    onChangeText={setOverrideStreakB}
-                  />
-                  <TouchableOpacity
-                    onPress={handleOverrideB}
-                    style={{
-                      paddingVertical: 8,
-                      borderRadius: shapes.s,
-                      backgroundColor: colors.primaryContainer,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: colors.onPrimaryContainer, fontWeight: '700', fontSize: 11 }}>Inject Device B</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* Custom Values Customization Panel */}
-            <View style={{ marginBottom: 12, padding: 12, backgroundColor: isDark ? '#26232A' : '#FAF6FF', borderRadius: shapes.m, borderWidth: 1, borderColor: colors.outlineVariant }}>
-              <Text style={[typography.titleSmall, { color: colors.primary, fontWeight: '800', marginBottom: 12 }]}>
-                Conflict Scenario Configurator
-              </Text>
-              
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Device A Focus Min</Text>
-                  <TextInput
-                    style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    keyboardType="numeric"
-                    value={customDurationA}
-                    onChangeText={setCustomDurationA}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Device B Focus Min</Text>
-                  <TextInput
-                    style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    keyboardType="numeric"
-                    value={customDurationB}
-                    onChangeText={setCustomDurationB}
-                  />
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <View style={{ flex: 1.5 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Select Conflict Task</Text>
-                  <View style={{ height: 36, borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: shapes.s, backgroundColor: colors.surface, justifyContent: 'center', paddingHorizontal: 8 }}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
-                      {[
-                        { id: 'task-m1-1', label: 'Linear Eq.' },
-                        { id: 'task-m1-2', label: 'Quad. Eq.' },
-                        { id: 'task-p1-1', label: 'Newton\'s' },
-                        { id: 'task-c1-1', label: 'Hydrocarb.' }
-                      ].map((taskOpt) => (
-                        <TouchableOpacity
-                          key={taskOpt.id}
-                          onPress={() => setCustomTaskId(taskOpt.id)}
-                          style={{
-                            paddingVertical: 3,
-                            paddingHorizontal: 8,
-                            borderRadius: 12,
-                            backgroundColor: customTaskId === taskOpt.id ? colors.primary : colors.surfaceVariant,
-                          }}
-                        >
-                          <Text style={{ color: customTaskId === taskOpt.id ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 10, fontWeight: '700' }}>
-                            {taskOpt.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
-                
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev A Status</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4, alignItems: 'center', height: 36 }}>
-                    {['done', 'in_progress', 'not_started'].map((statusOpt) => (
-                      <TouchableOpacity
-                        key={statusOpt}
-                        onPress={() => setCustomStatusA(statusOpt as any)}
-                        style={{
-                          paddingVertical: 3,
-                          paddingHorizontal: 6,
-                          borderRadius: 12,
-                          backgroundColor: customStatusA === statusOpt ? colors.primary : colors.surfaceVariant,
-                        }}
-                      >
-                        <Text style={{ color: customStatusA === statusOpt ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 8, fontWeight: '700' }}>
-                          {statusOpt}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev B Status</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4, alignItems: 'center', height: 36 }}>
-                    {['done', 'in_progress', 'not_started'].map((statusOpt) => (
-                      <TouchableOpacity
-                        key={statusOpt}
-                        onPress={() => setCustomStatusB(statusOpt as any)}
-                        style={{
-                          paddingVertical: 3,
-                          paddingHorizontal: 6,
-                          borderRadius: 12,
-                          backgroundColor: customStatusB === statusOpt ? colors.primary : colors.surfaceVariant,
-                        }}
-                      >
-                        <Text style={{ color: customStatusB === statusOpt ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 8, fontWeight: '700' }}>
-                          {statusOpt}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 4 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev A Version Clock</Text>
-                  <TextInput
-                    style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    keyboardType="numeric"
-                    value={customVersionA}
-                    onChangeText={setCustomVersionA}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev B Version Clock</Text>
-                  <TextInput
-                    style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
-                    keyboardType="numeric"
-                    value={customVersionB}
-                    onChangeText={setCustomVersionB}
-                  />
-                </View>
-              </View>
-            </View>
-
             {/* Custom Presets Section */}
             <Text style={[typography.titleSmall, { color: colors.primary, fontWeight: '800', marginBottom: 2 }]}>
               Custom Presets
             </Text>
             <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginBottom: 12, lineHeight: 16 }]}>
-              Execute simulation runs using your current configurator values.
+              Execute simulation runs using custom, inline configuration parameters.
             </Text>
 
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Custom Focus Conflict Scenario</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Simulate Device A (+{customDurationA}m) and Device B (+{customDurationB}m) focus blocks offline. Merging sums up coins and projects correct streak.
-                </Text>
+            {/* Focus Conflict Preset */}
+            <View style={{ marginBottom: 12, padding: 12, backgroundColor: isDark ? '#26232A' : '#FAF6FF', borderRadius: shapes.m, borderWidth: 1, borderColor: colors.outlineVariant }}>
+              {/* Header row: title + info icon pinned to right */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Custom Focus Conflict Scenario</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Custom Focus Conflict Scenario',
+                      'Event Sourcing & Summation Reconciliation',
+                      'Focus sessions completed offline are merged by compiling the full session list on the server, summing coins, and projecting streaks.',
+                      'Focus sessions represent real user study work. We must never drop either session; instead, we sum their rewards and aggregate their streaks.',
+                      'The server processes all completed session actions, registers unique UUIDs, and rolls up coins and streaks.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerFocusStreakConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Run Custom Focus</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 17, marginBottom: 10 }]}>
+                Simulate Device A (+{customDurationA}m) and Device B (+{customDurationB}m) focus blocks offline. Merging sums up coins and projects correct streak.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerFocusStreakConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Run Custom Focus</Text>
+                </InteractivePressable>
+              </View>
+
+              {/* Collapsible Config Trigger */}
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start' }}
+                onPress={() => setShowFocusConfig(!showFocusConfig)}
+              >
+                <ChevronIcon isOpen={showFocusConfig} color={colors.primary} />
+                <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>
+                  {showFocusConfig ? 'Hide Parameters' : 'Adjust Focus Durations'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Collapsible Config Content */}
+              {showFocusConfig && (
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12, borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Device A Focus Min</Text>
+                    <TextInput
+                      style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
+                      keyboardType="numeric"
+                      value={customDurationA}
+                      onChangeText={setCustomDurationA}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Device B Focus Min</Text>
+                    <TextInput
+                      style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
+                      keyboardType="numeric"
+                      value={customDurationB}
+                      onChangeText={setCustomDurationB}
+                    />
+                  </View>
+                </View>
+              )}
             </View>
 
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Custom Task Edit Conflict Scenario</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Simulate concurrent edits setting the selected task to "{customStatusA}" on Dev A and "{customStatusB}" on Dev B offline.
-                </Text>
+            {/* Task Edit Preset */}
+            <View style={{ marginBottom: 12, padding: 12, backgroundColor: isDark ? '#26232A' : '#FAF6FF', borderRadius: shapes.m, borderWidth: 1, borderColor: colors.outlineVariant }}>
+              {/* Header row: title + info icon pinned to right */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Custom Task Edit Conflict Scenario</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Custom Task Edit Conflict Scenario',
+                      'Version Clock + Precedence Wins',
+                      'Concurrent status updates with equal version clocks are resolved using status priority: Done > In Progress > Not Started.',
+                      'Preserves the maximum possible student progress. If one device marks a task "Done" and another marks it "In Progress", we converge to "Done".',
+                      'The server checks the task\'s logical version clock. If they match, it compares the precedence weights of the statuses.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskPrecedenceConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Run Custom Task</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 17, marginBottom: 10 }]}>
+                Simulate concurrent edits setting the selected task to "{customStatusA}" on Dev A and "{customStatusB}" on Dev B offline.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskPrecedenceConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Run Custom Task</Text>
+                </InteractivePressable>
+              </View>
+
+              {/* Collapsible Config Trigger */}
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start' }}
+                onPress={() => setShowTaskConfig(!showTaskConfig)}
+              >
+                <ChevronIcon isOpen={showTaskConfig} color={colors.primary} />
+                <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>
+                  {showTaskConfig ? 'Hide Parameters' : 'Adjust Task & Clock Parameters'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Collapsible Config Content */}
+              {showTaskConfig && (
+                <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: 12, gap: 10 }}>
+                  <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Select Conflict Task</Text>
+                      <View style={{ height: 36, borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: shapes.s, backgroundColor: colors.surface, justifyContent: 'center', paddingHorizontal: 8 }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
+                          {[
+                            { id: 'task-m1-1', label: 'Linear Eq.' },
+                            { id: 'task-m1-2', label: 'Quad. Eq.' },
+                            { id: 'task-p1-1', label: 'Newton\'s' },
+                            { id: 'task-c1-1', label: 'Hydrocarb.' }
+                          ].map((taskOpt) => (
+                            <TouchableOpacity
+                              key={taskOpt.id}
+                              onPress={() => setCustomTaskId(taskOpt.id)}
+                              style={{
+                                paddingVertical: 3,
+                                paddingHorizontal: 8,
+                                borderRadius: 12,
+                                backgroundColor: customTaskId === taskOpt.id ? colors.primary : colors.surfaceVariant,
+                              }}
+                            >
+                              <Text style={{ color: customTaskId === taskOpt.id ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 10, fontWeight: '700' }}>
+                                {taskOpt.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    </View>
+                    
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev A Status</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4, alignItems: 'center', height: 36 }}>
+                        {['done', 'in_progress', 'not_started'].map((statusOpt) => (
+                          <TouchableOpacity
+                            key={statusOpt}
+                            onPress={() => setCustomStatusA(statusOpt as any)}
+                            style={{
+                              paddingVertical: 3,
+                              paddingHorizontal: 6,
+                              borderRadius: 12,
+                              backgroundColor: customStatusA === statusOpt ? colors.primary : colors.surfaceVariant,
+                            }}
+                          >
+                            <Text style={{ color: customStatusA === statusOpt ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 8, fontWeight: '700' }}>
+                              {statusOpt}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev B Status</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4, alignItems: 'center', height: 36 }}>
+                        {['done', 'in_progress', 'not_started'].map((statusOpt) => (
+                          <TouchableOpacity
+                            key={statusOpt}
+                            onPress={() => setCustomStatusB(statusOpt as any)}
+                            style={{
+                              paddingVertical: 3,
+                              paddingHorizontal: 6,
+                              borderRadius: 12,
+                              backgroundColor: customStatusB === statusOpt ? colors.primary : colors.surfaceVariant,
+                            }}
+                          >
+                            <Text style={{ color: customStatusB === statusOpt ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 8, fontWeight: '700' }}>
+                              {statusOpt}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev A Version Clock</Text>
+                      <TextInput
+                        style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
+                        keyboardType="numeric"
+                        value={customVersionA}
+                        onChangeText={setCustomVersionA}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.labelMedium, { color: colors.onSurface, marginBottom: 4 }]}>Dev B Version Clock</Text>
+                      <TextInput
+                        style={[styles.webhookInput, { height: 36, borderColor: colors.outlineVariant, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: shapes.s }]}
+                        keyboardType="numeric"
+                        value={customVersionB}
+                        onChangeText={setCustomVersionB}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
 
             <View style={{ height: 1, backgroundColor: colors.outlineVariant, marginVertical: 12 }} />
@@ -1217,100 +1092,204 @@ export default function DevPanelScreen() {
               Standard conflict edge cases with predefined values to quickly check convergence, soft-deletes, and retries.
             </Text>
 
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Task Delete vs Edit Conflict Preset</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Device A deletes "Quadratic Equations" and Device B marks it "Done" offline. Soft delete wins on merge.
-                </Text>
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Task Delete vs Edit Conflict</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Task Delete vs Edit Conflict Preset',
+                      'Soft Delete Wins',
+                      'If a task is edited on one device and deleted on another concurrently, the deletion is treated as terminal and wins.',
+                      'Prevents resurrected tasks. Once a task is deleted by the user, status changes on other devices should not resurrect it.',
+                      'The server sets a \'deleted: true\' flag. Any status updates on tasks marked deleted are ignored.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskDeleteConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Device A deletes "Quadratic Equations", Device B marks it "Done" offline. Soft delete wins on merge.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskDeleteConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Replay Sync / Retries (Idempotency Audit)</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Queues duplicate focus completes in client logs to demonstrate backend and n8n webhook deduplication filters.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Replay Sync / Retries (Idempotency)</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Replay Sync / Retries (Idempotency Audit)',
+                      'Idempotent Event Deduplication',
+                      'The server and n8n discard duplicate action IDs, processing each sync transaction exactly once.',
+                      'Prevents duplicate rewards, streak double-increases, or double notification webhooks in case of network retries.',
+                      'The server stores a map of processed action UUIDs. n8n utilizes a deduplication filter using the focus session UUID.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerReplayConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Queues duplicate focus completes in client logs to demonstrate backend and n8n webhook deduplication filters.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerReplayConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Out-of-Order Timestamp Sync Preset</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Replays a newer change and older change out-of-order, verifying version clocks merge chronologically.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Out-of-Order Timestamp Sync</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Out-of-Order Timestamp Sync Preset',
+                      'Chronological Action Sort',
+                      'Action logs are sorted ascending by original client-side timestamps before processing.',
+                      'Network jitter can cause older actions to arrive after newer actions. Sorting ensures state changes apply in the exact order they occurred.',
+                      'The server sorts the client\'s action array by timestamp before running the reconciliation loops.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerOutOfOrderConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Replays a newer change and older change out-of-order, verifying version clocks merge chronologically.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerOutOfOrderConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Network Drop Sync Recovery Preset</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Enables packet loss, triggers focus complete offline, fails to sync, and recovers when packet loss is toggled off.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Network Drop Sync Recovery</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Network Drop Sync Recovery Preset',
+                      'Resilient Local Action Queueing',
+                      'Unsynced actions remain in the local Zustand queue until the server successfully returns a synchronized status.',
+                      'Guarantees zero data loss even during complete network dropouts.',
+                      'Actions are marked synced only after a HTTP 200 response. Failing requests leaves them in the offline queue for retry.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerNetworkDropConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Enables packet loss, triggers focus complete offline, fails to sync, and recovers when packet loss is toggled off.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerNetworkDropConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Clock Version Override Preset</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Client A updates task to "In Progress" (v5), Client B updates to "Done" (v2). Reconnect shows v5 wins on merge.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Clock Version Override</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Clock Version Override Preset',
+                      'Logical Version Clocks',
+                      'Each task mutation increments a version counter. A higher version number always overrides the server state, regardless of status priority.',
+                      'Represents the user\'s latest intended change, overriding older state.',
+                      'If a client action has version > serverTask.version, the server accepts it unconditionally.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerVersionOverrideConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Client A updates task to "In Progress" (v5), Client B updates to "Done" (v2). Reconnect shows v5 wins on merge.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerVersionOverrideConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Cross-Subject Concurrent Progress Sync Conflict</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Client A completes Math task offline, Client B completes Physics task offline. Restoring connection merges both concurrently and updates overall syllabus progress averages.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Cross-Subject Concurrent Progress</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Cross-Subject Concurrent Progress Sync Conflict',
+                      'Orthogonal State Merging',
+                      'Progress updates to separate subjects merge concurrently without interference.',
+                      'Unrelated subjects represent orthogonal state changes and do not conflict.',
+                      'The server updates tasks by Subject/Chapter indexes, combining both logs to recalculate overall study progress.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerCrossSubjectSyncConflict}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Client A completes Math task offline, Client B completes Physics task offline. Both merge concurrently and update syllabus progress averages.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerCrossSubjectSyncConflict}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Concurrent Task Creation Sync Preset</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Client A adds task "Calculus II" offline, Client B adds task "Quantum Mechanics" offline. Verification checks if both tasks merge sequentially without conflicts.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Concurrent Task Creation Sync</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Concurrent Task Creation Sync Preset',
+                      'Additive Collection Convergence',
+                      'Concurrently added tasks are merged additively on the server.',
+                      'If two devices add tasks offline, both are valid study items and must be preserved.',
+                      'Tasks are created with unique UUIDs. The server registers both in the canonical subject syllabus map.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerOutOfOrderTaskCreationPreset}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Device A adds "Calculus II" offline, Device B adds "Quantum Mechanics" offline. Both tasks merge without conflicts.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerOutOfOrderTaskCreationPreset}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
-
-            <View style={styles.presetRow}>
-              <View style={styles.presetInfo}>
-                <Text style={[typography.titleSmall, { color: colors.onSurface }]}>Daily Streak Re-evaluation & Normalization</Text>
-                <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, marginTop: 4 }]}>
-                  Simulate Client A (2 days streak) and Client B (1 day streak) concurrently online. The server projections resolve their streak dates, merging to 2 days streak correctly.
-                </Text>
+ 
+            <View style={[styles.presetCard, { borderBottomColor: colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                <Text style={[typography.titleSmall, { color: colors.onSurface, fontWeight: '700', flex: 1, paddingRight: 10, lineHeight: 18 }]}>Daily Streak Re-evaluation</Text>
+                <InfoButton
+                  onPress={() =>
+                    showTheoryModal(
+                      'Daily Streak Re-evaluation & Normalization',
+                      'Dynamic Session Rollups',
+                      'Mismatched streak days are corrected by dynamically recalculating streaks from the full canonical log of successful sessions.',
+                      'Prevents local state corruption from permanently desynchronizing the streak.',
+                      'The server computes streak sequences dynamically in the client\'s local timezone.'
+                    )
+                  }
+                />
               </View>
-              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerDailyStreakReevaluationPreset}>
-                <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </InteractivePressable>
+              <Text style={[typography.bodySmall, { color: colors.onSurfaceVariant, lineHeight: 16, marginBottom: 10 }]}>
+                Client A (2-day streak) and Client B (1-day streak) go online. Server re-evaluates from session logs and converges both to the correct streak.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerDailyStreakReevaluationPreset}>
+                  <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger</Text>
+                </InteractivePressable>
+              </View>
             </View>
           </View>
         )}
@@ -1448,6 +1427,8 @@ export default function DevPanelScreen() {
         )}
       </AppCard>
 
+
+
       {/* Danger Zone resets */}
       <View style={styles.dangerDeck}>
         <InteractivePressable
@@ -1516,33 +1497,79 @@ export default function DevPanelScreen() {
         </View>
       )}
 
-      {/* Styled custom alert modal overlay */}
+      {/* Compact animated info/alert modal overlay */}
       {alertModal && (
-        <View style={styles.modalOverlay}>
-          <AppCard variant="elevated" elevation={4} padding={24} style={styles.modalCard}>
-            <Text style={[typography.titleLarge, { color: alertModal.type === 'success' ? colors.success : colors.error, fontWeight: '800', textAlign: 'center' }]}>
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+          style={styles.modalOverlay}
+        >
+          <Animated.View
+            entering={FadeIn.springify().damping(18).stiffness(180)}
+            style={[
+              styles.infoModalCard,
+              {
+                backgroundColor: colors.surface,
+                borderRadius: shapes.l,
+                borderWidth: 1,
+                borderColor: alertModal.type === 'success' ? colors.primaryContainer : colors.errorContainer,
+                shadowColor: '#000',
+                shadowOpacity: 0.22,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 12,
+              }
+            ]}
+          >
+            {/* Accent bar */}
+            <View
+              style={{
+                height: 3,
+                borderRadius: 2,
+                backgroundColor: alertModal.type === 'success' ? colors.primary : colors.error,
+                marginBottom: 16,
+                width: 40,
+                alignSelf: 'center',
+              }}
+            />
+
+            {/* X close button */}
+            <TouchableOpacity
+              onPress={() => setAlertModal(null)}
+              style={[
+                styles.infoModalClose,
+                { backgroundColor: colors.surfaceVariant }
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '700', lineHeight: 16 }}>✕</Text>
+            </TouchableOpacity>
+
+            {/* Title */}
+            <Text style={[
+              typography.titleSmall,
+              {
+                color: alertModal.type === 'success' ? colors.primary : colors.error,
+                fontWeight: '800',
+                marginBottom: 8,
+                paddingRight: 28,
+              }
+            ]}>
               {alertModal.title}
             </Text>
-            <Text style={[typography.bodyMedium, { color: colors.onSurface, marginTop: 14, textAlign: 'center', lineHeight: 22 }]}>
+
+            {/* Body */}
+            <Text style={[
+              typography.bodySmall,
+              {
+                color: colors.onSurfaceVariant,
+                lineHeight: 19,
+              }
+            ]}>
               {alertModal.message}
             </Text>
-            <InteractivePressable
-              style={[
-                styles.modalButton,
-                {
-                  backgroundColor: alertModal.type === 'success' ? colors.success : colors.error,
-                  borderRadius: shapes.l,
-                },
-              ]}
-              onPress={() => setAlertModal(null)}
-              scaleTo={0.95}
-            >
-              <Text style={[typography.labelLarge, { color: colors.onPrimary, fontWeight: '800' }]}>
-                Acknowledge
-              </Text>
-            </InteractivePressable>
-          </AppCard>
-        </View>
+          </Animated.View>
+        </Animated.View>
       )}
     </Animated.View>
   );
@@ -1580,6 +1607,12 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  presetCard: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+  },
   presetRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1590,12 +1623,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   presetBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 110,
+    minWidth: 76,
   },
   gridTable: {
     padding: 12,
@@ -1726,5 +1759,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+  },
+  infoModalCard: {
+    width: '88%',
+    maxWidth: 360,
+    padding: 18,
+    position: 'relative',
+  },
+  infoModalClose: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
 });
