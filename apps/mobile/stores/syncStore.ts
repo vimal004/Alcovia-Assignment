@@ -5,6 +5,7 @@ import type { SyncAction, SyncActionType, ClientId, Subject, Chapter, Task } fro
 import { generateId } from '../utils/helpers';
 import { useDeviceStore } from './deviceStore';
 import { useServerStore } from './serverStore';
+import { Platform } from 'react-native';
 
 interface SyncState {
   actions: SyncAction[];
@@ -22,7 +23,7 @@ interface SyncState {
   sync: (clientId: ClientId) => Promise<void>;
 }
 
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
 
 export const useSyncStore = create<SyncState>()(
   persist(

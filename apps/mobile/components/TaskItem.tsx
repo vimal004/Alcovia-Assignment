@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Task, TaskStatus } from '../../../packages/shared/types';
 import { useM3Theme } from '../constants/Theme';
+import { showConfirm } from '../utils/helpers';
 import { AppCard } from './AppCard';
 
 interface TaskItemProps {
@@ -26,7 +27,7 @@ export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
       case 'not_started':
         return {
           label: 'Not Started',
-          color: colors.outline,
+          color: colors.onSurfaceVariant,
           bg: colors.surfaceVariant,
           icon: '○',
         };
@@ -47,7 +48,7 @@ export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
       default:
         return {
           label: 'Not Started',
-          color: colors.outline,
+          color: colors.onSurfaceVariant,
           bg: colors.surfaceVariant,
           icon: '○',
         };
@@ -67,16 +68,9 @@ export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
   };
 
   const handleDelete = () => {
-    if (Platform.OS === 'web') {
-      if (confirm(`Delete "${task.title}"?`)) {
-        onDelete(task.id);
-      }
-    } else {
-      Alert.alert('Delete Task', `Delete "${task.title}"?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => onDelete(task.id) },
-      ]);
-    }
+    showConfirm(`Delete "${task.title}"?`, () => {
+      onDelete(task.id);
+    });
   };
 
   return (

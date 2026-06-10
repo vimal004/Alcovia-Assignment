@@ -6,6 +6,7 @@ import { formatMinutes, getShadowStyle } from '../../utils/helpers';
 import { useM3Theme } from '../../constants/Theme';
 import { StatusChip } from '../../components/StatusChip';
 import { AppCard } from '../../components/AppCard';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 const PRESETS = [1, 25, 45, 60, 90, 120];
 
@@ -135,8 +136,8 @@ export default function FocusScreen() {
     if (runningSessionId) {
       completeSession(runningSessionId);
       setAlertState({
-        title: '🎉 Celebration!',
-        message: `Session completed successfully. You focused for ${selectedDuration}m and earned ${selectedDuration} coins!`,
+        title: 'Session Completed',
+        message: `Focus session completed successfully. You focused for ${selectedDuration}m and earned ${selectedDuration} coins!`,
         type: 'success',
       });
       resetTimerState();
@@ -148,10 +149,10 @@ export default function FocusScreen() {
       failSession(runningSessionId, reason);
       const msg =
         reason === 'give_up'
-          ? 'You chose to give up this focus session.'
-          : 'Focus failed because you left the app or switched tabs for more than 5 seconds.';
+          ? 'You chose to end this focus session early.'
+          : 'Focus session interrupted because you left the app or switched tabs for more than 5 seconds.';
       setAlertState({
-        title: '⚠️ Focus Interrupted',
+        title: 'Session Interrupted',
         message: msg,
         type: 'failure',
       });
@@ -167,15 +168,16 @@ export default function FocusScreen() {
   };
 
   return (
-    <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
+    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+      <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
       {runningSessionId ? (
         <View style={styles.runningContainer}>
           <View style={styles.runningHeader}>
             <Text style={[typography.headlineMedium, { color: colors.success, fontWeight: '800' }]}>
-              Session Active 🌳
+              Focus Session Active
             </Text>
             <Text style={[typography.bodyMedium, { color: colors.onSurfaceVariant, marginTop: 8, textAlign: 'center', lineHeight: 20 }]}>
-              Keep your mind clear. Switching tabs or leaving the app for more than 5 seconds will fail the session.
+              Keep focusing. Leaving the app or switching tabs for more than 5 seconds will cancel the session.
             </Text>
           </View>
 
@@ -191,17 +193,17 @@ export default function FocusScreen() {
             activeOpacity={0.8}
           >
             <Text style={[typography.labelLarge, { color: colors.onErrorContainer, fontWeight: '800' }]}>
-              Give Up 🏳️
+              Cancel Session
             </Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Text style={[typography.headlineMedium, { color: colors.onBackground, fontWeight: '800', textAlign: 'center' }]}>
-            Grow Your Focus Mind 🧠
+            Focus Workspace
           </Text>
           <Text style={[typography.bodyMedium, { color: colors.onSurfaceVariant, marginTop: 8, textAlign: 'center', marginBottom: 24, lineHeight: 20 }]}>
-            Select a duration preset and start focusing. Finishing earns you coins and builds your study streak!
+            Select a study duration preset and start focusing. Finishing earns you coins and builds your streak!
           </Text>
 
           {/* Big Card containing Presets and Timer Preview */}
@@ -243,7 +245,7 @@ export default function FocusScreen() {
             activeOpacity={0.8}
           >
             <Text style={[typography.labelLarge, { color: colors.onPrimary, fontWeight: '800', fontSize: 16 }]}>
-              Start Focus Session 🚀
+              Start Focus Block
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -278,6 +280,7 @@ export default function FocusScreen() {
         </View>
       )}
     </View>
+    </Animated.View>
   );
 }
 

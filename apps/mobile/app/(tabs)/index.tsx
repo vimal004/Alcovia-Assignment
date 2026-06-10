@@ -11,6 +11,7 @@ import { AchievementCard } from '../../components/AchievementCard';
 import { ProgressCard } from '../../components/ProgressCard';
 import { SyncIndicator } from '../../components/SyncIndicator';
 import type { Subject } from '../../../../packages/shared/types';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 const EMPTY_ARRAY: Subject[] = [];
 
@@ -49,7 +50,8 @@ export default function DashboardScreen() {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
 
       {/* Connection / Sync Indicator */}
       <SyncIndicator isOnline={isOnline} pendingCount={pendingCount} />
@@ -57,19 +59,19 @@ export default function DashboardScreen() {
       {/* Stats Cards */}
       <View style={styles.statsGrid}>
         <AchievementCard
-          emoji="🔥"
+          symbol="▲"
           value={`${studentState.streak} Days`}
           label="Streak"
           variant="primary"
         />
         <AchievementCard
-          emoji="🪙"
+          symbol="◆"
           value={studentState.coins}
           label="Coins"
           variant="secondary"
         />
         <AchievementCard
-          emoji="⏱️"
+          symbol="●"
           value={`${todayFocusMinutes}m`}
           label="Focus Today"
           variant="tertiary"
@@ -104,10 +106,11 @@ export default function DashboardScreen() {
         activeOpacity={0.85}
       >
         <Text style={[typography.labelLarge, styles.actionButtonText, { color: colors.onPrimary }]}>
-          Enter Focus Space ⏱️
+          Start Focus Session
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </Animated.View>
   );
 }
 

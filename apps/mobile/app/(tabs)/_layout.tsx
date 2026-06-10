@@ -3,6 +3,7 @@ import { Platform, View, StyleSheet } from 'react-native';
 import { useM3Theme } from '@/constants/Theme';
 import Svg, { Path, Circle, Polyline } from 'react-native-svg';
 import { getShadowStyle } from '@/utils/helpers';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TabIcon = ({ name, color, focused }: { name: string; color: any; focused: boolean }) => {
   const { colors } = useM3Theme();
@@ -58,6 +59,14 @@ const TabIcon = ({ name, color, focused }: { name: string; color: any; focused: 
 
 export default function TabLayout() {
   const { colors, typography } = useM3Theme();
+  const insets = useSafeAreaInsets();
+
+  const bottomPadding = Platform.OS === 'web'
+    ? 12
+    : (insets.bottom > 0 ? insets.bottom : (Platform.OS === 'ios' ? 24 : 14));
+  
+  const tabHeight = Platform.OS === 'web' ? 84 : (60 + bottomPadding);
+  const paddingTop = Platform.OS === 'web' ? 10 : 10;
 
   return (
     <Tabs
@@ -73,9 +82,9 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.outlineVariant,
-          height: Platform.OS === 'ios' ? 90 : 80,
-          paddingTop: 10,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 14,
+          height: tabHeight,
+          paddingTop: paddingTop,
+          paddingBottom: bottomPadding,
           ...getShadowStyle(colors.shadow, 0, -2, 0.08, 10, 8),
         },
         headerStyle: {

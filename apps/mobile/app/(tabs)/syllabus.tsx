@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, LayoutAnimation, 
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useSyncStore } from '../../stores/syncStore';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { TaskItem } from '../../components/TaskItem';
 import { ProgressBar } from '../../components/ProgressBar';
 import { calculateChapterProgress, calculateSubjectProgress } from '../../utils/helpers';
@@ -61,12 +62,13 @@ export default function SyllabusScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       <Text style={[typography.headlineMedium, { color: colors.onBackground, fontWeight: '800' }]}>
-        Syllabus Progress 📚
+        Syllabus Progress
       </Text>
       <Text style={[typography.bodyMedium, { color: colors.onSurfaceVariant, marginTop: 6, marginBottom: 20, lineHeight: 20 }]}>
-        Track your study items. Modify status offline. Progress rolls up instantly. Add custom items to simulate sync merges!
+        Track your study items, modify task statuses offline, and view real-time progress rollups.
       </Text>
 
       {subjects.map((subject) => {
@@ -178,6 +180,7 @@ export default function SyllabusScreen() {
         );
       })}
     </ScrollView>
+    </Animated.View>
   );
 }
 

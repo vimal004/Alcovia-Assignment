@@ -4,7 +4,7 @@ import { AppCard } from './AppCard';
 import { useM3Theme } from '../constants/Theme';
 
 interface AchievementCardProps {
-  emoji: string;
+  symbol: string; // Minimal geometric symbol instead of childish emojis
   value: string | number;
   label: string;
   tint?: string;
@@ -12,7 +12,7 @@ interface AchievementCardProps {
 }
 
 export function AchievementCard({
-  emoji,
+  symbol,
   value,
   label,
   tint,
@@ -54,8 +54,8 @@ export function AchievementCard({
         },
       ]}
     >
-      <View style={styles.emojiContainer}>
-        <Text style={styles.emoji}>{emoji}</Text>
+      <View style={[styles.symbolContainer, { backgroundColor: colors.surface + '80' }]}>
+        <Text style={[styles.symbol, { color: tint || getOnContainerColor() }]}>{symbol}</Text>
       </View>
       <Text style={[typography.titleLarge, styles.value, { color: tint || getOnContainerColor() }]}>
         {value}
@@ -74,17 +74,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 100,
   },
-  emojiContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  symbolContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     marginBottom: 10,
   },
-  emoji: {
-    fontSize: 22,
+  symbol: {
+    fontSize: 14,
+    fontWeight: '900',
   },
   value: {
     fontWeight: '700',
@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   label: {
     marginTop: 4,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.25,
   },
 });

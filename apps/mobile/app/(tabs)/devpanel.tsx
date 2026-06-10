@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, TextInput } from 'react-native';
 import { useDeviceStore } from '../../stores/deviceStore';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useFocusStore } from '../../stores/focusStore';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useSyncStore } from '../../stores/syncStore';
@@ -274,12 +275,13 @@ export default function DevPanelScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       <Text style={[typography.headlineMedium, { color: colors.onBackground, fontWeight: '800' }]}>
-        Simulation Control Deck ⚙️
+        Developer Console
       </Text>
       <Text style={[typography.bodyMedium, { color: colors.onSurfaceVariant, marginTop: 4, marginBottom: 12, lineHeight: 20 }]}>
-        Toggle client online statuses independently, run predefined conflict scenarios, and inspect server webhook logs.
+        Manage node configurations, trigger offline synchronization conflicts, and monitor active webhook logs.
       </Text>
 
       {/* Dual Device Simulation Grids */}
@@ -470,7 +472,7 @@ export default function DevPanelScreen() {
                   <View key={log.id} style={[styles.logItem, { backgroundColor: isDark ? '#211E26' : '#F7F4FA', borderColor: colors.outlineVariant }]}>
                     <View style={styles.logHeader}>
                       <Text style={[typography.labelMedium, { color: log.status === 'success' ? colors.success : colors.warning, fontWeight: '800' }]}>
-                        {log.status === 'success' ? '🚀 DISPATCHED (ONCE)' : '⚠️ DEDUPLICATED'}
+                        {log.status === 'success' ? 'WEBHOOK FIRED' : 'WEBHOOK DEDUPLICATED'}
                       </Text>
                       <Text style={[typography.bodySmall, { color: colors.outline }]}>
                         {new Date(log.timestamp).toLocaleTimeString()}
@@ -500,11 +502,12 @@ export default function DevPanelScreen() {
           activeOpacity={0.8}
         >
           <Text style={[typography.labelLarge, { color: colors.onErrorContainer, fontWeight: '800' }]}>
-            Reset Entire Simulation DB 🚨
+            Reset Simulation Database
           </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </Animated.View>
   );
 }
 

@@ -22,6 +22,10 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'GoogleSans-Regular': require('../assets/fonts/static/GoogleSans-Regular.ttf'),
+    'GoogleSans-Medium': require('../assets/fonts/static/GoogleSans-Medium.ttf'),
+    'GoogleSans-SemiBold': require('../assets/fonts/static/GoogleSans-SemiBold.ttf'),
+    'GoogleSans-Bold': require('../assets/fonts/static/GoogleSans-Bold.ttf'),
   });
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.

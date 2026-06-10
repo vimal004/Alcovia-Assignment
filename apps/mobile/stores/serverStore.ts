@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { FocusSession, Task, StudentState, SyncAction, ClientId, Subject } from '../../../packages/shared/types';
 
+import { Platform } from 'react-native';
+
 export interface WebhookLog {
   id: string;
   timestamp: string;
@@ -27,7 +29,7 @@ interface ServerState {
   resetServer: () => Promise<void>;
 }
 
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
 
 const defaultStudentState = (): StudentState => ({
   studentId: 'student-001',
