@@ -73,7 +73,7 @@ The n8n workflow uses a **Deduplicate Node** that evaluates incoming events usin
 ## 4. Key Tradeoffs
 
 ### Database: Custom Thread-Safe JSON Database vs. SQLite
-*   **Decision**: We chose to implement a native, zero-dependency JSON database with atomic writes (`fs.renameSync` from a temporary file) and serialized operation queuing using a Promise chain (`dbPromiseChain`).
+*   **Decision**: I chose to implement a native, zero-dependency JSON database with atomic writes (`fs.renameSync` from a temporary file) and serialized operation queuing using a Promise chain (`dbPromiseChain`).
 *   **Tradeoff**: While SQLite provides built-in transactional capabilities, native bindings (such as `better-sqlite3`) compile binary extensions during installation. Mismatched node version environments can cause compilation failures. The custom atomic JSON database provides portability across platforms while maintaining thread safety and crash resilience.
 
 ### Timezone Boundary Alignment: Client-Offset Projection
