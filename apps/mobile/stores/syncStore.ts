@@ -90,7 +90,7 @@ export const useSyncStore = create<SyncState>()(
         const { useFocusStore } = require('./focusStore');
         const { useSyllabusStore } = require('./syllabusStore');
 
-        const { isOnline } = useDeviceStore.getState();
+        const { isOnline, packetLoss, latencyMs } = useDeviceStore.getState();
         if (!isOnline[clientId]) return;
 
         const pendingActions = get().getPendingActions(clientId);
@@ -104,6 +104,14 @@ export const useSyncStore = create<SyncState>()(
         }
 
         try {
+          if (packetLoss) {
+            throw new Error('Simulated network packet loss - connection failed.');
+          }
+
+          if (latencyMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, latencyMs));
+          }
+
           // Send actions to Express API
           const response = await fetch(`${SERVER_URL}/api/sync`, {
             method: 'POST',

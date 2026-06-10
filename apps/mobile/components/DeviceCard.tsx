@@ -65,7 +65,7 @@ export function DeviceCard({
           >
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[typography.labelLarge, { color: statusColor, fontWeight: '700' }]}>
-              {isOnline ? 'Online 🟢' : 'Offline 🔴'}
+              {isOnline ? 'Online' : 'Offline'}
             </Text>
           </InteractivePressable>
         ) : (

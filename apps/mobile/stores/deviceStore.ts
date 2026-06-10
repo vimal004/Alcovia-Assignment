@@ -6,9 +6,13 @@ import type { ClientId } from '../../../packages/shared/types';
 interface DeviceState {
   clientId: ClientId;
   isOnline: Record<ClientId, boolean>;
+  latencyMs: number;
+  packetLoss: boolean;
   setClientId: (id: ClientId) => void;
   setOnline: (id: ClientId, online: boolean) => void;
   toggleOnline: (id: ClientId) => void;
+  setLatencyMs: (latency: number) => void;
+  setPacketLoss: (loss: boolean) => void;
 }
 
 export const useDeviceStore = create<DeviceState>()(
@@ -19,6 +23,8 @@ export const useDeviceStore = create<DeviceState>()(
         'client-A': true,
         'client-B': true,
       },
+      latencyMs: 0,
+      packetLoss: false,
       setClientId: (id) => set({ clientId: id }),
       setOnline: (id, online) =>
         set((state) => ({
@@ -28,6 +34,8 @@ export const useDeviceStore = create<DeviceState>()(
         set((state) => ({
           isOnline: { ...state.isOnline, [id]: !state.isOnline[id] },
         })),
+      setLatencyMs: (latency) => set({ latencyMs: latency }),
+      setPacketLoss: (loss) => set({ packetLoss: loss }),
     }),
     {
       name: 'alcovia-device-store',
