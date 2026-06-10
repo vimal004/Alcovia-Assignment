@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { formatTime } from '../utils/helpers';
+import { useM3Theme } from '../constants/Theme';
 
 interface TimerProps {
   remainingSeconds: number;
@@ -10,40 +11,71 @@ interface TimerProps {
 }
 
 export function Timer({ remainingSeconds, totalSeconds, isRunning }: TimerProps) {
+  const { colors, typography } = useM3Theme();
+
   const progress = totalSeconds > 0 ? 1 - remainingSeconds / totalSeconds : 0;
-  const size = 240;
-  const strokeWidth = 10;
+  const size = 260;
+  const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - progress);
 
-  const getColor = () => {
-    if (!isRunning) return '#BDBDBD';
-    if (remainingSeconds <= 60) return '#FF5722'; // Last minute - urgent
-    if (remainingSeconds <= 300) return '#FF9800'; // Last 5 min - warning
-    return '#4CAF50'; // Normal - green
+  const getTimerColors = () => {
+    if (!isRunning) {
+      return {
+        stroke: colors.outlineVariant,
+        gradientStart: colors.surfaceVariant,
+        gradientEnd: colors.surfaceVariant,
+      };
+    }
+    if (remainingSeconds <= 60) {
+      return {
+        stroke: colors.error,
+        gradientStart: '#FF8A80',
+        gradientEnd: colors.error,
+      }; // Urgent - Last minute red
+    }
+    if (remainingSeconds <= 300) {
+      return {
+        stroke: colors.warning,
+        gradientStart: '#FFD180',
+        gradientEnd: colors.warning,
+      }; // Warning - orange
+    }
+    // Default focus colors
+    return {
+      stroke: colors.primary,
+      gradientStart: colors.primary,
+      gradientEnd: colors.tertiary,
+    };
   };
 
-  const color = getColor();
+  const timerStyle = getTimerColors();
 
   return (
     <View style={styles.container}>
       <Svg width={size} height={size} style={styles.svg}>
-        {/* Background circle */}
+        <Defs>
+          <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={timerStyle.gradientStart} />
+            <Stop offset="100%" stopColor={timerStyle.gradientEnd} />
+          </LinearGradient>
+        </Defs>
+        {/* Background Track */}
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E8E8E8"
-          strokeWidth={strokeWidth}
+          stroke={colors.surfaceVariant}
+          strokeWidth={strokeWidth - 2}
           fill="none"
         />
-        {/* Progress circle */}
+        {/* Glowing/Progress Ring */}
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={color}
+          stroke="url(#progressGradient)"
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={`${circumference}`}
@@ -53,9 +85,11 @@ export function Timer({ remainingSeconds, totalSeconds, isRunning }: TimerProps)
         />
       </Svg>
       <View style={styles.timeContainer}>
-        <Text style={[styles.time, { color }]}>{formatTime(remainingSeconds)}</Text>
-        <Text style={styles.label}>
-          {isRunning ? 'Remaining' : remainingSeconds === totalSeconds ? 'Ready' : 'Paused'}
+        <Text style={[typography.displayLarge, styles.time, { color: isRunning ? colors.onBackground : colors.outline }]}>
+          {formatTime(remainingSeconds)}
+        </Text>
+        <Text style={[typography.labelMedium, styles.label, { color: isRunning ? colors.primary : colors.outline, fontWeight: '700' }]}>
+          {isRunning ? 'STAY FOCUSED' : remainingSeconds === totalSeconds ? 'READY TO START' : 'PAUSED'}
         </Text>
       </View>
     </View>
@@ -64,8 +98,8 @@ export function Timer({ remainingSeconds, totalSeconds, isRunning }: TimerProps)
 
 const styles = StyleSheet.create({
   container: {
-    width: 240,
-    height: 240,
+    width: 260,
+    height: 260,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -74,15 +108,15 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   time: {
-    fontSize: 48,
-    fontWeight: '200',
+    fontWeight: '300',
     fontVariant: ['tabular-nums'],
+    letterSpacing: -1,
   },
   label: {
-    fontSize: 14,
-    color: '#9E9E9E',
-    marginTop: 4,
+    marginTop: 6,
+    letterSpacing: 2,
   },
 });

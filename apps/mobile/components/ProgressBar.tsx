@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useM3Theme } from '../constants/Theme';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -10,29 +11,35 @@ interface ProgressBarProps {
 
 export function ProgressBar({
   progress,
-  color = '#4CAF50',
+  color,
   height = 8,
   showLabel = true,
 }: ProgressBarProps) {
+  const { colors, shapes, typography } = useM3Theme();
+
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const percentage = Math.round(clampedProgress * 100);
+  const themeColor = color || colors.primary;
 
   return (
     <View style={styles.container}>
-      <View style={[styles.track, { height }]}>
+      <View style={[styles.track, { height, backgroundColor: colors.surfaceVariant, borderRadius: shapes.full }]}>
         <View
           style={[
             styles.fill,
             {
               width: `${percentage}%`,
-              backgroundColor: color,
+              backgroundColor: themeColor,
               height,
+              borderRadius: shapes.full,
             },
           ]}
         />
       </View>
       {showLabel && (
-        <Text style={[styles.label, { color }]}>{percentage}%</Text>
+        <Text style={[typography.labelMedium, styles.label, { color: themeColor }]}>
+          {percentage}%
+        </Text>
       )}
     </View>
   );
@@ -46,17 +53,14 @@ const styles = StyleSheet.create({
   },
   track: {
     flex: 1,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
     overflow: 'hidden',
   },
   fill: {
-    borderRadius: 4,
+    // animated or styled
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    minWidth: 40,
+    minWidth: 36,
     textAlign: 'right',
+    fontWeight: '700',
   },
 });

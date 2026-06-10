@@ -1,19 +1,18 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+import { M3Colors } from './Theme';
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
+    text: M3Colors.light.onBackground,
+    background: M3Colors.light.background,
+    tint: M3Colors.light.primary,
+    tabIconDefault: M3Colors.light.outline,
+    tabIconSelected: M3Colors.light.primary,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
+    text: M3Colors.dark.onBackground,
+    background: M3Colors.dark.background,
+    tint: M3Colors.dark.primary,
+    tabIconDefault: M3Colors.dark.outline,
+    tabIconSelected: M3Colors.dark.primary,
   },
 };

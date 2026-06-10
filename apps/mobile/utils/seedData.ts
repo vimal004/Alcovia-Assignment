@@ -1,7 +1,7 @@
 // Seed data for the syllabus feature
 // 3 subjects × 3 chapters × 4 tasks = 36 tasks
 
-import type { Subject } from '../../packages/shared/types';
+import type { Subject } from '../../../packages/shared/types';
 
 export function generateSeedData(): Subject[] {
   return [

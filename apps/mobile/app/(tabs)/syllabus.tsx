@@ -1,31 +1,61 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager, TextInput } from 'react-native';
 import { useSyllabusStore } from '../../stores/syllabusStore';
+import { useDeviceStore } from '../../stores/deviceStore';
 import { TaskItem } from '../../components/TaskItem';
 import { ProgressBar } from '../../components/ProgressBar';
 import { calculateChapterProgress, calculateSubjectProgress } from '../../utils/helpers';
+import { useM3Theme } from '../../constants/Theme';
+import { AppCard } from '../../components/AppCard';
+import type { Subject, Chapter, Task } from '../../../../packages/shared/types';
+
+const EMPTY_ARRAY: Subject[] = [];
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function SyllabusScreen() {
-  const subjects = useSyllabusStore((state) => state.getSubjects());
+  const { colors, typography, shapes, isDark } = useM3Theme();
+  const clientId = useDeviceStore((state) => state.clientId);
+  const subjects = useSyllabusStore((state) => state.subjects[clientId] || EMPTY_ARRAY);
   const updateTaskStatus = useSyllabusStore((state) => state.updateTaskStatus);
   const deleteTask = useSyllabusStore((state) => state.deleteTask);
+  const addTask = useSyllabusStore((state) => state.addTask);
 
   const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({
-    'sub-math': true, // default expand the first subject
+    'sub-math': true,
   });
 
+  // Task creation local inputs state
+  const [taskInputs, setTaskInputs] = useState<Record<string, string>>({});
+
   const toggleExpandSubject = (subjectId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedSubjects((prev) => ({
       ...prev,
       [subjectId]: !prev[subjectId],
     }));
   };
 
+  const handleAddTask = (chapterId: string) => {
+    const title = taskInputs[chapterId]?.trim();
+    if (!title) return;
+
+    addTask(chapterId, title);
+    setTaskInputs((prev) => ({
+      ...prev,
+      [chapterId]: '',
+    }));
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>Syllabus Progress</Text>
-      <Text style={styles.subtitle}>
-        Mark tasks status. Progress rolls up automatically.
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+      <Text style={[typography.headlineMedium, { color: colors.onBackground, fontWeight: '800' }]}>
+        Syllabus Progress 📚
+      </Text>
+      <Text style={[typography.bodyMedium, { color: colors.onSurfaceVariant, marginTop: 6, marginBottom: 20, lineHeight: 20 }]}>
+        Track your study items. Modify status offline. Progress rolls up instantly. Add custom items to simulate sync merges!
       </Text>
 
       {subjects.map((subject) => {
@@ -33,37 +63,57 @@ export default function SyllabusScreen() {
         const subjectProgress = calculateSubjectProgress(subject.chapters);
 
         return (
-          <View key={subject.id} style={styles.subjectCard}>
+          <AppCard
+            key={subject.id}
+            variant="elevated"
+            elevation={1}
+            padding={0}
+            style={styles.subjectCard}
+          >
             {/* Subject Header */}
             <TouchableOpacity
-              style={styles.subjectHeader}
+              style={[
+                styles.subjectHeader,
+                {
+                  backgroundColor: colors.surface,
+                  borderBottomColor: isExpanded ? colors.outlineVariant : 'transparent',
+                  borderBottomWidth: isExpanded ? 1 : 0,
+                },
+              ]}
               onPress={() => toggleExpandSubject(subject.id)}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
               <View style={styles.subjectInfo}>
-                <Text style={styles.subjectName}>{subject.name}</Text>
-                <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+                <Text style={[typography.titleLarge, { color: colors.primary, fontWeight: '700' }]}>{subject.name}</Text>
+                <Text style={[styles.expandIcon, { color: colors.outline }]}>
+                  {isExpanded ? '▼' : '▶'}
+                </Text>
               </View>
-              <ProgressBar progress={subjectProgress} color="#3F51B5" />
+              <ProgressBar progress={subjectProgress} color={colors.primary} />
             </TouchableOpacity>
 
             {/* Chapters & Tasks list */}
             {isExpanded && (
-              <View style={styles.chaptersContainer}>
-                {subject.chapters.map((chapter) => {
+              <View style={[styles.chaptersContainer, { backgroundColor: isDark ? '#1D1A22' : '#F6F2FA' }]}>
+                {subject.chapters.map((chapter: Chapter) => {
                   const chapterProgress = calculateChapterProgress(chapter.tasks);
-                  const activeTasks = chapter.tasks.filter((t) => !t.deleted);
+                  const activeTasks = chapter.tasks.filter((t: Task) => !t.deleted);
+                  const currentInputValue = taskInputs[chapter.id] || '';
 
                   return (
-                    <View key={chapter.id} style={styles.chapterCard}>
+                    <View key={chapter.id} style={[styles.chapterCard, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
                       <View style={styles.chapterHeader}>
-                        <Text style={styles.chapterName}>{chapter.name}</Text>
-                        <ProgressBar progress={chapterProgress} color="#4CAF50" />
+                        <Text style={[typography.titleMedium, { color: colors.onSurface, fontWeight: '700', flex: 1 }]}>
+                          {chapter.name}
+                        </Text>
+                        <View style={{ width: 100 }}>
+                          <ProgressBar progress={chapterProgress} color={colors.success} showLabel={false} />
+                        </View>
                       </View>
 
                       <View style={styles.tasksList}>
                         {activeTasks.length > 0 ? (
-                          activeTasks.map((task) => (
+                          activeTasks.map((task: Task) => (
                             <TaskItem
                               key={task.id}
                               task={task}
@@ -72,15 +122,48 @@ export default function SyllabusScreen() {
                             />
                           ))
                         ) : (
-                          <Text style={styles.noTasks}>No active tasks in this chapter.</Text>
+                          <Text style={[typography.bodyMedium, styles.noTasks, { color: colors.outline }]}>
+                            No active tasks in this chapter.
+                          </Text>
                         )}
+                      </View>
+
+                      {/* Inline Task Creation Deck */}
+                      <View style={[styles.createTaskRow, { borderTopColor: colors.outlineVariant }]}>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            {
+                              color: colors.onSurface,
+                              borderColor: colors.outlineVariant,
+                              borderRadius: shapes.s,
+                              backgroundColor: isDark ? '#26232A' : '#FAF6FF',
+                            },
+                          ]}
+                          placeholder="Add new task..."
+                          placeholderTextColor={colors.outline}
+                          value={currentInputValue}
+                          onChangeText={(text) =>
+                            setTaskInputs((prev) => ({ ...prev, [chapter.id]: text }))
+                          }
+                          onSubmitEditing={() => handleAddTask(chapter.id)}
+                        />
+                        <TouchableOpacity
+                          style={[styles.addButton, { backgroundColor: colors.primaryContainer, borderRadius: shapes.s }]}
+                          onPress={() => handleAddTask(chapter.id)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[typography.labelLarge, { color: colors.onPrimaryContainer, fontWeight: '800' }]}>
+                            ＋ Add
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   );
                 })}
               </View>
             )}
-          </View>
+          </AppCard>
         );
       })}
     </ScrollView>
@@ -90,92 +173,69 @@ export default function SyllabusScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
   },
   contentContainer: {
-    padding: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1A237E',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#78909C',
-    marginBottom: 16,
+    padding: 20,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   subjectCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#ECEFF1',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 16,
   },
   subjectHeader: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+    padding: 18,
   },
   subjectInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  subjectName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1A237E',
+    marginBottom: 10,
   },
   expandIcon: {
     fontSize: 12,
-    color: '#78909C',
   },
   chaptersContainer: {
-    padding: 12,
-    backgroundColor: '#FAFAFA',
-    borderTopWidth: 1,
-    borderTopColor: '#ECEFF1',
-    gap: 12,
+    padding: 14,
+    gap: 14,
   },
   chapterCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#ECEFF1',
   },
   chapterHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 14,
     gap: 12,
   },
-  chapterName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#37474F',
-    flex: 1,
-  },
   tasksList: {
-    gap: 2,
+    gap: 4,
   },
   noTasks: {
-    fontSize: 12,
-    color: '#BDBDBD',
+    fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
-  deleteText: {
-    fontSize: 12,
-    color: '#D50000',
+  createTaskRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 14,
+  },
+  addButton: {
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

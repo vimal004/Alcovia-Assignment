@@ -1,18 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
-import type { Task, TaskStatus } from '../../packages/shared/types';
+import type { Task, TaskStatus } from '../../../packages/shared/types';
+import { useM3Theme } from '../constants/Theme';
+import { AppCard } from './AppCard';
 
 interface TaskItemProps {
   task: Task;
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onDelete: (taskId: string) => void;
 }
-
-const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; icon: string }> = {
-  not_started: { label: 'Not Started', color: '#757575', bg: '#F5F5F5', icon: '○' },
-  in_progress: { label: 'In Progress', color: '#FF9800', bg: '#FFF3E0', icon: '◐' },
-  done: { label: 'Done', color: '#4CAF50', bg: '#E8F5E9', icon: '●' },
-};
 
 const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
   not_started: 'in_progress',
@@ -21,9 +17,49 @@ const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
 };
 
 export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
+  const { colors, typography, shapes } = useM3Theme();
+
   if (task.deleted) return null;
 
-  const config = STATUS_CONFIG[task.status];
+  const getStatusConfig = (status: TaskStatus) => {
+    switch (status) {
+      case 'not_started':
+        return {
+          label: 'Not Started',
+          color: colors.outline,
+          bg: colors.surfaceVariant,
+          icon: '○',
+        };
+      case 'in_progress':
+        return {
+          label: 'In Progress',
+          color: colors.warning,
+          bg: colors.warningContainer || '#FFF3E0',
+          icon: '◐',
+        };
+      case 'done':
+        return {
+          label: 'Done',
+          color: colors.success,
+          bg: colors.successContainer || '#E8F5E9',
+          icon: '✓',
+        };
+      default:
+        return {
+          label: 'Not Started',
+          color: colors.outline,
+          bg: colors.surfaceVariant,
+          icon: '○',
+        };
+    }
+  };
+
+  const config = getStatusConfig(task.status) || {
+    label: 'Not Started',
+    color: colors.outline,
+    bg: colors.surfaceVariant,
+    icon: '○',
+  };
 
   const handleStatusCycle = () => {
     const next = NEXT_STATUS[task.status];
@@ -44,77 +80,89 @@ export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.statusButton}
-        onPress={handleStatusCycle}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.statusIcon, { color: config.color }]}>{config.icon}</Text>
-      </TouchableOpacity>
-      <View style={styles.content}>
-        <Text style={[styles.title, task.status === 'done' && styles.titleDone]}>
-          {task.title}
-        </Text>
-        <View style={[styles.badge, { backgroundColor: config.bg }]}>
-          <Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text>
+    <AppCard variant="elevated" elevation={1} padding={12} style={styles.card}>
+      <View style={styles.container}>
+        {/* Status Circular Indicator */}
+        <TouchableOpacity
+          style={[
+            styles.statusButton,
+            {
+              borderColor: config.color,
+              backgroundColor: task.status === 'done' ? colors.successContainer : 'transparent',
+              borderRadius: shapes.full,
+            },
+          ]}
+          onPress={handleStatusCycle}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.statusIcon, { color: config.color, fontWeight: '700' }]}>
+            {config.icon}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Content Section */}
+        <View style={styles.content}>
+          <Text
+            style={[
+              typography.bodyLarge,
+              { color: colors.onSurface },
+              task.status === 'done' && [styles.titleDone, { color: colors.outline }],
+            ]}
+          >
+            {task.title}
+          </Text>
+          <View style={[styles.badge, { backgroundColor: config.bg, borderRadius: shapes.xs }]}>
+            <Text style={[typography.labelMedium, { color: config.color, fontWeight: '700' }]}>
+              {config.label}
+            </Text>
+          </View>
         </View>
+
+        {/* Delete button */}
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.deleteText, { color: colors.outline }]}>✕</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={handleDelete}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.deleteText}>✕</Text>
-      </TouchableOpacity>
-    </View>
+    </AppCard>
   );
 }
 
 const styles = StyleSheet.create({
+  card: {
+    marginBottom: 8,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
   },
   statusButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    borderWidth: 2,
   },
   statusIcon: {
-    fontSize: 22,
+    fontSize: 16,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
-    gap: 4,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#212121',
+    gap: 6,
   },
   titleDone: {
     textDecorationLine: 'line-through',
-    color: '#9E9E9E',
   },
   badge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
   },
   deleteButton: {
     width: 32,
@@ -125,6 +173,5 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     fontSize: 16,
-    color: '#BDBDBD',
   },
 });

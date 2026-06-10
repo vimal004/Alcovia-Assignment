@@ -4,14 +4,23 @@ import { useRouter } from 'expo-router';
 import { useFocusStore } from '../../stores/focusStore';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDeviceStore } from '../../stores/deviceStore';
-import { calculateSubjectProgress } from '../../utils/helpers';
+import { useSyncStore } from '../../stores/syncStore';
+import { calculateSubjectProgress, getShadowStyle } from '../../utils/helpers';
+import { useM3Theme } from '../../constants/Theme';
+import { AchievementCard } from '../../components/AchievementCard';
+import { ProgressCard } from '../../components/ProgressCard';
+import { SyncIndicator } from '../../components/SyncIndicator';
+import type { Subject } from '../../../../packages/shared/types';
+
+const EMPTY_ARRAY: Subject[] = [];
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { colors, shapes, typography, isDark } = useM3Theme();
   const clientId = useDeviceStore((state) => state.clientId);
-  const isOnline = useDeviceStore((state) => state.isOnline);
+  const isOnline = useDeviceStore((state) => state.isOnline[clientId]);
   const clientState = useFocusStore((state) => state.studentState[clientId]);
-  const subjects = useSyllabusStore((state) => state.getSubjects());
+  const subjects = useSyllabusStore((state) => state.subjects[clientId] || EMPTY_ARRAY);
   const initializeSyllabus = useSyllabusStore((state) => state.initializeIfNeeded);
 
   // Initialize syllabus seed data if not present
@@ -32,56 +41,68 @@ export default function DashboardScreen() {
 
   const totalProgress = subjects.length > 0 ? calculateSubjectProgress(subjects.flatMap(s => s.chapters)) : 0;
 
+  const pendingCount = useSyncStore((state) =>
+    state.actions.filter((a) => a.clientId === clientId && !a.synced).length
+  );
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Device Header Status */}
-      <View style={[styles.deviceHeader, isOnline ? styles.onlineBg : styles.offlineBg]}>
-        <Text style={styles.deviceText}>
-          Active Device: <Text style={styles.bold}>{clientId}</Text> | Status: <Text style={styles.bold}>{isOnline ? 'Online 🟢' : 'Offline 🔴'}</Text>
-        </Text>
-      </View>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+
+      {/* Connection / Sync Indicator */}
+      <SyncIndicator isOnline={isOnline} pendingCount={pendingCount} />
 
       {/* Stats Cards */}
       <View style={styles.statsGrid}>
-        <View style={styles.card}>
-          <Text style={styles.cardEmoji}>🔥</Text>
-          <Text style={styles.cardValue}>{studentState.streak} Days</Text>
-          <Text style={styles.cardLabel}>Current Streak</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEmoji}>🪙</Text>
-          <Text style={styles.cardValue}>{studentState.coins}</Text>
-          <Text style={styles.cardLabel}>Coins Earned</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEmoji}>⏱️</Text>
-          <Text style={styles.cardValue}>{todayFocusMinutes}m</Text>
-          <Text style={styles.cardLabel}>Today's Focus</Text>
-        </View>
+        <AchievementCard
+          emoji="🔥"
+          value={`${studentState.streak} Days`}
+          label="Streak"
+          variant="primary"
+        />
+        <AchievementCard
+          emoji="🪙"
+          value={studentState.coins}
+          label="Coins"
+          variant="secondary"
+        />
+        <AchievementCard
+          emoji="⏱️"
+          value={`${todayFocusMinutes}m`}
+          label="Focus Today"
+          variant="tertiary"
+        />
       </View>
 
       {/* Syllabus Progress Overview */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Syllabus Progress</Text>
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressPercentage}>
-            {Math.round(totalProgress * 100)}%
-          </Text>
-          <Text style={styles.progressSubtext}>Completed of all subjects</Text>
-        </View>
-        <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: `${totalProgress * 100}%` }]} />
-        </View>
+      <View style={styles.sectionHeader}>
+        <Text style={[typography.titleMedium, { color: colors.onBackground, fontWeight: '700' }]}>
+          Progress Tracker
+        </Text>
       </View>
 
-      {/* Actions */}
+      <ProgressCard
+        title="Overall Study Progress"
+        subtitle="Weighted average across mathematics, physics, and chemistry"
+        progress={totalProgress}
+        color={colors.primary}
+      />
+
+      {/* Action Button */}
       <TouchableOpacity
-        style={styles.actionButton}
+        style={[
+          styles.actionButton,
+          {
+            backgroundColor: colors.primary,
+            borderRadius: shapes.xl,
+            ...getShadowStyle(colors.shadow, 0, 4, 0.15, 8, 4),
+          },
+        ]}
         onPress={() => router.push('/focus')}
+        activeOpacity={0.85}
       >
-        <Text style={styles.actionButtonText}>Start Focus Session ⏱️</Text>
+        <Text style={[typography.labelLarge, styles.actionButtonText, { color: colors.onPrimary }]}>
+          Enter Focus Space ⏱️
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -90,123 +111,32 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
   },
   contentContainer: {
-    padding: 16,
+    padding: 20,
     gap: 16,
-  },
-  deviceHeader: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  onlineBg: {
-    backgroundColor: '#E8F5E9',
-  },
-  offlineBg: {
-    backgroundColor: '#FFEBEE',
-  },
-  deviceText: {
-    fontSize: 14,
-    color: '#37474F',
-  },
-  bold: {
-    fontWeight: 'bold',
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
   },
-  card: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#ECEFF1',
-  },
-  cardEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  cardValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A237E',
-    textAlign: 'center',
-  },
-  cardLabel: {
-    fontSize: 12,
-    color: '#78909C',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#ECEFF1',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#37474F',
-    marginBottom: 16,
-  },
-  progressContainer: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  progressPercentage: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  progressSubtext: {
-    fontSize: 14,
-    color: '#78909C',
-    marginTop: 4,
-  },
-  progressBarTrack: {
-    height: 10,
-    backgroundColor: '#ECEFF1',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
-    borderRadius: 5,
+  sectionHeader: {
+    marginTop: 8,
+    marginBottom: -4,
   },
   actionButton: {
-    backgroundColor: '#1A237E',
-    borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: '#1A237E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    justifyContent: 'center',
+    marginTop: 8,
   },
   actionButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

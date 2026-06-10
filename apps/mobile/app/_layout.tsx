@@ -42,11 +42,37 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+import { M3Colors } from '@/constants/Theme';
+
+const M3LightTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: M3Colors.light.primary,
+    background: M3Colors.light.background,
+    card: M3Colors.light.surface,
+    text: M3Colors.light.onSurface,
+    border: M3Colors.light.outlineVariant,
+  },
+};
+
+const M3DarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: M3Colors.dark.primary,
+    background: M3Colors.dark.background,
+    card: M3Colors.dark.surface,
+    text: M3Colors.dark.onSurface,
+    border: M3Colors.dark.outlineVariant,
+  },
+};
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? M3DarkTheme : M3LightTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />

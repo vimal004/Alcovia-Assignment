@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { FocusSession, StudentState } from '../../packages/shared/types';
+import type { FocusSession, StudentState } from '../../../packages/shared/types';
 import { generateId, getTodayDate } from '../utils/helpers';
 import { useDeviceStore } from './deviceStore';
 import { useSyncStore } from './syncStore';

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 // Helper utilities
 
 // Generate a simple UUID v4
@@ -53,4 +55,29 @@ export function calculateSubjectProgress(
 // Storage key with client namespace
 export function getStorageKey(clientId: string, key: string): string {
   return `alcovia_${clientId}_${key}`;
+}
+
+// Generate cross-platform shadow styles
+export function getShadowStyle(
+  color: string,
+  offsetX: number,
+  offsetY: number,
+  opacity: number,
+  radius: number,
+  elevation: number
+): any {
+  if (Platform.OS === 'web') {
+    // Map colors like hex or name to standard RGBA or hex string
+    const rgbaColor = color.startsWith('#') ? color : '#000000';
+    return {
+      boxShadow: `${offsetX}px ${offsetY}px ${radius}px ${rgbaColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+    };
+  }
+  return {
+    shadowColor: color,
+    shadowOffset: { width: offsetX, height: offsetY },
+    shadowOpacity: opacity,
+    shadowRadius: radius,
+    elevation,
+  };
 }
