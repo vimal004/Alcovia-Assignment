@@ -20,6 +20,7 @@ interface SyncState {
   getPendingActions: (clientId: string) => SyncAction[];
   markSynced: (actionId: string) => void;
   clearActions: (clientId: string) => void;
+  pruneSyncedActions: () => void;
   sync: (clientId: ClientId) => Promise<void>;
 }
 
@@ -74,6 +75,17 @@ export const useSyncStore = create<SyncState>()(
         }));
       },
 
+      pruneSyncedActions: () => {
+        const threshold = new Date();
+        threshold.setHours(threshold.getHours() - 24); // Keep synced actions for 24 hours for debug logs in devpanel
+
+        set((state) => ({
+          actions: state.actions.filter(
+            (a) => !a.synced || new Date(a.timestamp).getTime() > threshold.getTime()
+          ),
+        }));
+      },
+
       sync: async (clientId: ClientId) => {
         const { useFocusStore } = require('./focusStore');
         const { useSyllabusStore } = require('./syllabusStore');
@@ -84,6 +96,13 @@ export const useSyncStore = create<SyncState>()(
         const pendingActions = get().getPendingActions(clientId);
         const clientTasks = useSyllabusStore.getState().subjects[clientId] || [];
 
+        let timezone = 'UTC';
+        try {
+          timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        } catch (e) {
+          // ignore timezone resolution failure
+        }
+
         try {
           // Send actions to Express API
           const response = await fetch(`${SERVER_URL}/api/sync`, {
@@ -93,6 +112,7 @@ export const useSyncStore = create<SyncState>()(
               clientId,
               clientActions: pendingActions,
               clientTasks,
+              timezone,
             }),
           });
 
@@ -106,6 +126,9 @@ export const useSyncStore = create<SyncState>()(
           result.syncedActionIds.forEach((id: string) => {
             get().markSynced(id);
           });
+
+          // Prune old synced actions from local storage to prevent memory bloat
+          get().pruneSyncedActions();
 
           // 1. Sync Focus Sessions & Student State on client
           useFocusStore.setState((state: any) => ({
@@ -164,6 +187,7 @@ export const useSyncStore = create<SyncState>()(
                 clientId: otherClientId,
                 clientActions: otherPending,
                 clientTasks: otherTasks,
+                timezone,
               }),
             });
 
@@ -173,6 +197,9 @@ export const useSyncStore = create<SyncState>()(
               otherResult.syncedActionIds.forEach((id: string) => {
                 get().markSynced(id);
               });
+
+              // Prune actions on the other client as well
+              get().pruneSyncedActions();
 
               useFocusStore.setState((state: any) => ({
                 sessions: {

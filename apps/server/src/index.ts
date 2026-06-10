@@ -20,8 +20,29 @@ function isYesterday(dateStr: string, compareDateStr: string): boolean {
   return diffDays === 1;
 }
 
+// Formats a date into YYYY-MM-DD in the specified timezone
+function getLocalDateString(dateStr: string | Date, timeZone: string): string {
+  try {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(date);
+  } catch (e) {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    return date.toISOString().split('T')[0];
+  }
+}
+
 // Recalculates coins, focus minutes, and streaks based on canonical successful focus sessions
-export function recalculateStudentState(sessions: FocusSession[], today: string): StudentState {
+export function recalculateStudentState(
+  sessions: FocusSession[],
+  today: string,
+  timeZone: string = 'UTC'
+): StudentState {
   const successSessions = sessions.filter((s) => s.status === 'success');
 
   // 1. Calculate coins
@@ -29,14 +50,14 @@ export function recalculateStudentState(sessions: FocusSession[], today: string)
 
   // 2. Calculate today's focus minutes
   const todayFocusMinutes = successSessions
-    .filter((s) => s.endedAt && s.endedAt.split('T')[0] === today)
+    .filter((s) => s.endedAt && getLocalDateString(s.endedAt, timeZone) === today)
     .reduce((sum, s) => sum + s.targetDuration, 0);
 
   // 3. Calculate streak (consecutive focus days going backwards from latest success date)
   const dates = Array.from(
     new Set(
       successSessions
-        .map((s) => (s.endedAt ? s.endedAt.split('T')[0] : null))
+        .map((s) => (s.endedAt ? getLocalDateString(s.endedAt, timeZone) : null))
         .filter((d): d is string => d !== null)
     )
   ).sort();
@@ -146,8 +167,9 @@ app.post('/api/notification-sink', async (req, res) => {
 // Synchronize Client Actions & Conflicts Reconciler
 app.post('/api/sync', async (req, res) => {
   try {
-    const { clientId, clientActions, clientTasks } = req.body;
-    const today = new Date().toISOString().split('T')[0];
+    const { clientId, clientActions, clientTasks, timezone } = req.body;
+    const clientTimezone = timezone || 'UTC';
+    const today = getLocalDateString(new Date(), clientTimezone);
 
     // Read current database state
     const state = await Database.read();
@@ -182,7 +204,7 @@ app.post('/api/sync', async (req, res) => {
             updatedSessions.push({ ...session, synced: true });
 
             // Temporarily calculate student state metrics for webhook
-            const tempState = recalculateStudentState(updatedSessions, today);
+            const tempState = recalculateStudentState(updatedSessions, today, clientTimezone);
 
             const webhookPayload = {
               eventId: session.id,
@@ -319,7 +341,7 @@ app.post('/api/sync', async (req, res) => {
     }
 
     // Finalize state calculations
-    const finalStudentState = recalculateStudentState(updatedSessions, today);
+    const finalStudentState = recalculateStudentState(updatedSessions, today, clientTimezone);
 
     // Save back to DB
     state.tasks = updatedTasks;

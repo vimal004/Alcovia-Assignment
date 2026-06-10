@@ -51,3 +51,11 @@ We decided on explicit, deterministic resolution rules to guarantee convergence:
 ### Database: Custom Atomic JSON File Database vs SQLite
 *   **Decision:** We chose to build a native, zero-dependency JSON-file database utilizing Node.js's built-in `fs` module, equipped with **atomic writes** (`fs.renameSync` from a temp file) and **operation queueing (Promise locks)**.
 *   **Tradeoff:** While SQLite provides built-in transactions, native packages like `better-sqlite3` compile binary extensions during `npm install`. If the grader's environment has mismatched compiler setups or Node.js versions, it could fail to compile. The atomic JSON file database guarantees **100% setup-free portability** while still maintaining persistence and durability across crashes.
+
+### Timezone Boundary Resolution: Intl-based Local Offset Projection
+*   **Decision:** The client resolves its native timezone name (e.g. `Asia/Kolkata`) via standard `Intl.DateTimeFormat` and passes it on every sync request. The server uses `Intl.DateTimeFormat` with `'en-CA'` locale to format and evaluate dates in that exact timezone.
+*   **Tradeoff:** This ensures daily streak calculations and total focus minutes match the student's real local day, rather than breaking when they pass UTC midnight boundaries.
+
+### Storage Pruning: Synced Action Garbage Collection
+*   **Decision:** After each successful synchronization, actions that have been marked `synced: true` and are older than 24 hours are deleted from client storage.
+*   **Tradeoff:** Keeping synced actions for 24 hours ensures they remain visible in the Developer Console for easy demoing and troubleshooting, while automated deletion prevents long-term storage bloat in AsyncStorage.
