@@ -472,10 +472,6 @@ app.get('/api/pending-mutations', async (req, res) => {
   }
 });
 
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Alcovia server running on http://localhost:${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`🚀 Alcovia server running on http://localhost:${PORT}`);
+});
