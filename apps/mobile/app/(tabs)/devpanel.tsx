@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, TextInput } from 'react-native';
 import { useDeviceStore } from '../../stores/deviceStore';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { InteractivePressable } from '../../components/InteractivePressable';
 import { useFocusStore } from '../../stores/focusStore';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useSyncStore } from '../../stores/syncStore';
@@ -38,6 +39,8 @@ export default function DevPanelScreen() {
   const [inspectOpen, setInspectOpen] = useState(true);
   const [logsOpen, setLogsOpen] = useState(true);
   const [presetsOpen, setPresetsOpen] = useState(true);
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const [alertModal, setAlertModal] = useState<{ title: string; message: string; type: 'success' | 'failure' } | null>(null);
 
   // Client states for comparison
   const clientAState = useFocusStore((state) => state.studentState['client-A']);
@@ -76,16 +79,25 @@ export default function DevPanelScreen() {
   };
 
   const handleResetAll = () => {
-    showConfirm('Reset ALL clients and server data to default seed data?', () => {
-      useFocusStore.getState().resetClient('client-A');
-      useFocusStore.getState().resetClient('client-B');
-      useSyllabusStore.getState().resetClient('client-A');
-      useSyllabusStore.getState().resetClient('client-B');
-      clearActions('client-A');
-      clearActions('client-B');
-      resetServer().then(() => {
-        showAlert('Success', 'All client and server states have been reset!');
-      });
+    setConfirmModal({
+      title: 'Reset Database?',
+      message: 'Reset ALL clients and server data to default seed data? This cannot be undone.',
+      onConfirm: () => {
+        useFocusStore.getState().resetClient('client-A');
+        useFocusStore.getState().resetClient('client-B');
+        useSyllabusStore.getState().resetClient('client-A');
+        useSyllabusStore.getState().resetClient('client-B');
+        clearActions('client-A');
+        clearActions('client-B');
+        resetServer().then(() => {
+          setConfirmModal(null);
+          setAlertModal({
+            title: 'Reset Successful',
+            message: 'All client stores and the server database have been successfully reset to defaults.',
+            type: 'success',
+          });
+        });
+      },
     });
   };
 
@@ -275,7 +287,10 @@ export default function DevPanelScreen() {
   };
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+    <Animated.View
+      entering={FadeIn.duration(250)}
+      style={{ flex: 1 }}
+    >
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       <Text style={[typography.headlineMedium, { color: colors.onBackground, fontWeight: '800' }]}>
         Developer Console
@@ -326,9 +341,9 @@ export default function DevPanelScreen() {
                   Simulate Device A and Device B completing different focus sessions offline. Merging sums up coins and projects the correct streak.
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerFocusStreakConflict}>
+              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerFocusStreakConflict}>
                 <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </TouchableOpacity>
+              </InteractivePressable>
             </View>
 
             <View style={styles.presetRow}>
@@ -338,9 +353,9 @@ export default function DevPanelScreen() {
                   Simulate Device A marking a task "Done" and Device B marking it "In Progress" offline. Merging resolves to "Done".
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskPrecedenceConflict}>
+              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskPrecedenceConflict}>
                 <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </TouchableOpacity>
+              </InteractivePressable>
             </View>
 
             <View style={styles.presetRow}>
@@ -350,9 +365,9 @@ export default function DevPanelScreen() {
                   Simulate Device A deleting a task and Device B editing it offline. Merging resolves to Deleted (Soft delete wins).
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskDeleteConflict}>
+              <InteractivePressable style={[styles.presetBtn, { backgroundColor: colors.secondaryContainer }]} onPress={triggerTaskDeleteConflict}>
                 <Text style={{ color: colors.onSecondaryContainer, fontWeight: '700', fontSize: 12 }}>Trigger Scenario</Text>
-              </TouchableOpacity>
+              </InteractivePressable>
             </View>
           </View>
         )}
@@ -496,17 +511,100 @@ export default function DevPanelScreen() {
 
       {/* Danger Zone resets */}
       <View style={styles.dangerDeck}>
-        <TouchableOpacity
-          style={[styles.dangerBtn, { backgroundColor: colors.errorContainer, borderColor: colors.error, borderRadius: shapes.xl }]}
+        <InteractivePressable
+          style={[
+            styles.dangerBtn,
+            {
+              backgroundColor: 'transparent',
+              borderColor: isDark ? '#FFFFFF' : '#BA1A1A',
+              borderWidth: 1.5,
+              borderRadius: shapes.xl,
+            },
+          ]}
           onPress={handleResetAll}
-          activeOpacity={0.8}
         >
-          <Text style={[typography.labelLarge, { color: colors.onErrorContainer, fontWeight: '800' }]}>
+          <Text style={[typography.labelLarge, { color: isDark ? '#FFFFFF' : '#BA1A1A', fontWeight: '800' }]}>
             Reset Simulation Database
           </Text>
-        </TouchableOpacity>
+        </InteractivePressable>
       </View>
     </ScrollView>
+      {/* Styled custom confirm modal overlay */}
+      {confirmModal && (
+        <View style={styles.modalOverlay}>
+          <AppCard variant="elevated" elevation={4} padding={24} style={styles.modalCard}>
+            <Text style={[typography.titleLarge, { color: colors.error, fontWeight: '800', textAlign: 'center' }]}>
+              {confirmModal.title}
+            </Text>
+            <Text style={[typography.bodyMedium, { color: colors.onSurface, marginTop: 14, textAlign: 'center', lineHeight: 22 }]}>
+              {confirmModal.message}
+            </Text>
+            <View style={styles.modalButtonsRow}>
+              <InteractivePressable
+                style={[
+                  styles.modalCancelButton,
+                  {
+                    borderColor: colors.outlineVariant,
+                    borderWidth: 1,
+                    borderRadius: shapes.l,
+                  },
+                ]}
+                onPress={() => setConfirmModal(null)}
+                scaleTo={0.95}
+              >
+                <Text style={[typography.labelLarge, { color: colors.onSurfaceVariant, fontWeight: '800' }]}>
+                  Cancel
+                </Text>
+              </InteractivePressable>
+              
+              <InteractivePressable
+                style={[
+                  styles.modalConfirmButton,
+                  {
+                    backgroundColor: colors.error,
+                    borderRadius: shapes.l,
+                  },
+                ]}
+                onPress={confirmModal.onConfirm}
+                scaleTo={0.95}
+              >
+                <Text style={[typography.labelLarge, { color: colors.onPrimary, fontWeight: '800' }]}>
+                  Reset
+                </Text>
+              </InteractivePressable>
+            </View>
+          </AppCard>
+        </View>
+      )}
+
+      {/* Styled custom alert modal overlay */}
+      {alertModal && (
+        <View style={styles.modalOverlay}>
+          <AppCard variant="elevated" elevation={4} padding={24} style={styles.modalCard}>
+            <Text style={[typography.titleLarge, { color: alertModal.type === 'success' ? colors.success : colors.error, fontWeight: '800', textAlign: 'center' }]}>
+              {alertModal.title}
+            </Text>
+            <Text style={[typography.bodyMedium, { color: colors.onSurface, marginTop: 14, textAlign: 'center', lineHeight: 22 }]}>
+              {alertModal.message}
+            </Text>
+            <InteractivePressable
+              style={[
+                styles.modalButton,
+                {
+                  backgroundColor: alertModal.type === 'success' ? colors.success : colors.error,
+                  borderRadius: shapes.l,
+                },
+              ]}
+              onPress={() => setAlertModal(null)}
+              scaleTo={0.95}
+            >
+              <Text style={[typography.labelLarge, { color: colors.onPrimary, fontWeight: '800' }]}>
+                Acknowledge
+              </Text>
+            </InteractivePressable>
+          </AppCard>
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -643,6 +741,49 @@ const styles = StyleSheet.create({
   dangerBtn: {
     borderWidth: 1,
     paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    zIndex: 999,
+  },
+  modalCard: {
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+    width: '100%',
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButton: {
+    marginTop: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useM3Theme } from '../constants/Theme';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -21,18 +22,33 @@ export function ProgressBar({
   const percentage = Math.round(clampedProgress * 100);
   const themeColor = color || colors.primary;
 
+  const animatedProgress = useSharedValue(clampedProgress);
+
+  useEffect(() => {
+    animatedProgress.value = withTiming(clampedProgress, {
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [clampedProgress]);
+
+  const animatedFillStyle = useAnimatedStyle(() => {
+    return {
+      width: `${animatedProgress.value * 100}%`,
+    };
+  });
+
   return (
     <View style={styles.container}>
       <View style={[styles.track, { height, backgroundColor: colors.surfaceVariant, borderRadius: shapes.full }]}>
-        <View
+        <Animated.View
           style={[
             styles.fill,
             {
-              width: `${percentage}%`,
               backgroundColor: themeColor,
               height,
               borderRadius: shapes.full,
             },
+            animatedFillStyle,
           ]}
         />
       </View>

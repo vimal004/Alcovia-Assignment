@@ -4,6 +4,8 @@ import type { Task, TaskStatus } from '../../../packages/shared/types';
 import { useM3Theme } from '../constants/Theme';
 import { showConfirm } from '../utils/helpers';
 import { AppCard } from './AppCard';
+import { InteractivePressable } from './InteractivePressable';
+import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 
 interface TaskItemProps {
   task: Task;
@@ -74,25 +76,29 @@ export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
   };
 
   return (
-    <AppCard variant="elevated" elevation={1} padding={12} style={styles.card}>
-      <View style={styles.container}>
-        {/* Status Circular Indicator */}
-        <TouchableOpacity
-          style={[
-            styles.statusButton,
-            {
-              borderColor: config.color,
-              backgroundColor: task.status === 'done' ? colors.successContainer : 'transparent',
-              borderRadius: shapes.full,
-            },
-          ]}
-          onPress={handleStatusCycle}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.statusIcon, { color: config.color, fontWeight: '700' }]}>
-            {config.icon}
-          </Text>
-        </TouchableOpacity>
+    <Animated.View
+      entering={FadeInUp.duration(200)}
+      exiting={FadeOutDown.duration(150)}
+    >
+      <AppCard variant="elevated" elevation={1} padding={12} style={styles.card}>
+        <View style={styles.container}>
+          {/* Status Circular Indicator */}
+          <InteractivePressable
+            style={[
+              styles.statusButton,
+              {
+                borderColor: config.color,
+                backgroundColor: task.status === 'done' ? colors.successContainer : 'transparent',
+                borderRadius: shapes.full,
+              },
+            ]}
+            onPress={handleStatusCycle}
+            scaleTo={0.9}
+          >
+            <Text style={[styles.statusIcon, { color: config.color, fontWeight: '700' }]}>
+              {config.icon}
+            </Text>
+          </InteractivePressable>
 
         {/* Content Section */}
         <View style={styles.content}>
@@ -112,16 +118,17 @@ export function TaskItem({ task, onStatusChange, onDelete }: TaskItemProps) {
           </View>
         </View>
 
-        {/* Delete button */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDelete}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.deleteText, { color: colors.outline }]}>✕</Text>
-        </TouchableOpacity>
-      </View>
-    </AppCard>
+          {/* Delete button */}
+          <InteractivePressable
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            scaleTo={0.85}
+          >
+            <Text style={[styles.deleteText, { color: colors.outline }]}>✕</Text>
+          </InteractivePressable>
+        </View>
+      </AppCard>
+    </Animated.View>
   );
 }
 

@@ -6,6 +6,7 @@ import { formatMinutes, getShadowStyle } from '../../utils/helpers';
 import { useM3Theme } from '../../constants/Theme';
 import { StatusChip } from '../../components/StatusChip';
 import { AppCard } from '../../components/AppCard';
+import { InteractivePressable } from '../../components/InteractivePressable';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 const PRESETS = [1, 25, 45, 60, 90, 120];
@@ -186,7 +187,10 @@ export default function FocusScreen() {
   };
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+    <Animated.View
+      entering={FadeIn.duration(250)}
+      style={{ flex: 1 }}
+    >
       <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
       {runningSessionId ? (
         <View style={styles.runningContainer}>
@@ -205,15 +209,14 @@ export default function FocusScreen() {
             isRunning={true}
           />
 
-          <TouchableOpacity
+          <InteractivePressable
             style={[styles.giveUpButton, { backgroundColor: colors.errorContainer, borderRadius: shapes.xl }]}
             onPress={handleGiveUp}
-            activeOpacity={0.8}
           >
             <Text style={[typography.labelLarge, { color: colors.onErrorContainer, fontWeight: '800' }]}>
               Cancel Session
             </Text>
-          </TouchableOpacity>
+          </InteractivePressable>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -250,7 +253,7 @@ export default function FocusScreen() {
             </View>
           </AppCard>
 
-          <TouchableOpacity
+          <InteractivePressable
             style={[
               styles.startButton,
               {
@@ -260,12 +263,11 @@ export default function FocusScreen() {
               },
             ]}
             onPress={handleStart}
-            activeOpacity={0.8}
           >
             <Text style={[typography.labelLarge, { color: colors.onPrimary, fontWeight: '800', fontSize: 16 }]}>
               Start Focus Block
             </Text>
-          </TouchableOpacity>
+          </InteractivePressable>
         </ScrollView>
       )}
 
@@ -279,7 +281,7 @@ export default function FocusScreen() {
             <Text style={[typography.bodyMedium, { color: colors.onSurface, marginTop: 14, textAlign: 'center', lineHeight: 22 }]}>
               {alertState.message}
             </Text>
-            <TouchableOpacity
+            <InteractivePressable
               style={[
                 styles.modalButton,
                 {
@@ -288,12 +290,11 @@ export default function FocusScreen() {
                 },
               ]}
               onPress={() => setAlertState(null)}
-              activeOpacity={0.8}
             >
               <Text style={[typography.labelLarge, { color: colors.onPrimary, fontWeight: '800' }]}>
                 Acknowledge
               </Text>
-            </TouchableOpacity>
+            </InteractivePressable>
           </AppCard>
         </View>
       )}

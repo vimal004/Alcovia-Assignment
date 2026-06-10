@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { InteractivePressable } from './InteractivePressable';
 import { useM3Theme } from '../constants/Theme';
 
 interface StatusChipProps {
@@ -22,7 +23,6 @@ export function StatusChip({
   const { colors, shapes, typography } = useM3Theme();
 
   const isInteractive = typeof onPress === 'function';
-  const ChipContainer = isInteractive ? TouchableOpacity : View;
 
   // Custom coloring or Material 3 standards
   const defaultBg = selected ? colors.secondaryContainer : colors.surface;
@@ -44,15 +44,24 @@ export function StatusChip({
     fontWeight: '600' as const,
   };
 
+  if (isInteractive) {
+    return (
+      <InteractivePressable
+        style={[styles.chip, containerStyle]}
+        onPress={onPress}
+        scaleTo={0.95}
+      >
+        {icon && <View style={styles.iconContainer}>{icon}</View>}
+        <Text style={textStyle}>{label}</Text>
+      </InteractivePressable>
+    );
+  }
+
   return (
-    <ChipContainer
-      style={[styles.chip, containerStyle]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
+    <View style={[styles.chip, containerStyle]}>
       {icon && <View style={styles.iconContainer}>{icon}</View>}
       <Text style={textStyle}>{label}</Text>
-    </ChipContainer>
+    </View>
   );
 }
 

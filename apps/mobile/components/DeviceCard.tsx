@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { AppCard } from './AppCard';
 import { useM3Theme } from '../constants/Theme';
+import { InteractivePressable } from './InteractivePressable';
 
 interface DeviceCardProps {
   clientId: 'client-A' | 'client-B';
@@ -38,7 +39,7 @@ export function DeviceCard({
         },
       ]}
     >
-      <TouchableOpacity onPress={() => onSelect(clientId)} style={styles.content}>
+      <InteractivePressable onPress={() => onSelect(clientId)} style={styles.content} scaleTo={0.98}>
         <View style={styles.headerRow}>
           <Text style={[typography.titleMedium, { color: colors.onSurface }]}>
             Device {clientId === 'client-A' ? 'A' : 'B'}
@@ -57,16 +58,16 @@ export function DeviceCard({
         <View style={styles.divider} />
 
         {isActive ? (
-          <TouchableOpacity
+          <InteractivePressable
             style={[styles.statusToggle, { backgroundColor: statusContainerColor }]}
             onPress={onToggleOnline}
-            activeOpacity={0.8}
+            scaleTo={0.93}
           >
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[typography.labelLarge, { color: statusColor, fontWeight: '700' }]}>
               {isOnline ? 'Online 🟢' : 'Offline 🔴'}
             </Text>
-          </TouchableOpacity>
+          </InteractivePressable>
         ) : (
           <View style={styles.inactivePlaceholder}>
             <Text style={[typography.bodySmall, { color: colors.outline }]}>
@@ -74,7 +75,7 @@ export function DeviceCard({
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </InteractivePressable>
     </AppCard>
   );
 }

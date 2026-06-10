@@ -10,6 +10,7 @@ import { useM3Theme } from '../../constants/Theme';
 import { AchievementCard } from '../../components/AchievementCard';
 import { ProgressCard } from '../../components/ProgressCard';
 import { SyncIndicator } from '../../components/SyncIndicator';
+import { InteractivePressable } from '../../components/InteractivePressable';
 import type { Subject } from '../../../../packages/shared/types';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -50,7 +51,10 @@ export default function DashboardScreen() {
   );
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+    <Animated.View
+      entering={FadeIn.duration(250)}
+      style={{ flex: 1 }}
+    >
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
 
       {/* Connection / Sync Indicator */}
@@ -93,7 +97,7 @@ export default function DashboardScreen() {
       />
 
       {/* Action Button */}
-      <TouchableOpacity
+      <InteractivePressable
         style={[
           styles.actionButton,
           {
@@ -103,12 +107,11 @@ export default function DashboardScreen() {
           },
         ]}
         onPress={() => router.push('/focus')}
-        activeOpacity={0.85}
       >
         <Text style={[typography.labelLarge, styles.actionButtonText, { color: colors.onPrimary }]}>
           Start Focus Session
         </Text>
-      </TouchableOpacity>
+      </InteractivePressable>
     </ScrollView>
     </Animated.View>
   );

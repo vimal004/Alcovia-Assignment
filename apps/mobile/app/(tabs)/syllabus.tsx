@@ -3,12 +3,13 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, LayoutAnimation, 
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useSyncStore } from '../../stores/syncStore';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { TaskItem } from '../../components/TaskItem';
 import { ProgressBar } from '../../components/ProgressBar';
 import { calculateChapterProgress, calculateSubjectProgress } from '../../utils/helpers';
 import { useM3Theme } from '../../constants/Theme';
 import { AppCard } from '../../components/AppCard';
+import { InteractivePressable } from '../../components/InteractivePressable';
 import type { Subject, Chapter, Task } from '../../../../packages/shared/types';
 
 const EMPTY_ARRAY: Subject[] = [];
@@ -62,7 +63,10 @@ export default function SyllabusScreen() {
   };
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1 }}>
+    <Animated.View
+      entering={FadeIn.duration(250)}
+      style={{ flex: 1 }}
+    >
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       <Text style={[typography.headlineMedium, { color: colors.onBackground, fontWeight: '800' }]}>
         Syllabus Progress
@@ -107,7 +111,11 @@ export default function SyllabusScreen() {
 
             {/* Chapters & Tasks list */}
             {isExpanded && (
-              <View style={[styles.chaptersContainer, { backgroundColor: isDark ? '#1D1A22' : '#F6F2FA' }]}>
+              <Animated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(150)}
+                style={[styles.chaptersContainer, { backgroundColor: isDark ? '#1D1A22' : '#F6F2FA' }]}
+              >
                 {subject.chapters.map((chapter: Chapter) => {
                   const chapterProgress = calculateChapterProgress(chapter.tasks);
                   const activeTasks = chapter.tasks.filter((t: Task) => !t.deleted);
@@ -161,20 +169,19 @@ export default function SyllabusScreen() {
                           }
                           onSubmitEditing={() => handleAddTask(chapter.id)}
                         />
-                        <TouchableOpacity
+                        <InteractivePressable
                           style={[styles.addButton, { backgroundColor: colors.primaryContainer, borderRadius: shapes.s }]}
                           onPress={() => handleAddTask(chapter.id)}
-                          activeOpacity={0.8}
                         >
                           <Text style={[typography.labelLarge, { color: colors.onPrimaryContainer, fontWeight: '800' }]}>
                             ＋ Add
                           </Text>
-                        </TouchableOpacity>
+                        </InteractivePressable>
                       </View>
                     </View>
                   );
                 })}
-              </View>
+              </Animated.View>
             )}
           </AppCard>
         );
