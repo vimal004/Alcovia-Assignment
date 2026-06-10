@@ -1,0 +1,56 @@
+// Helper utilities
+
+// Generate a simple UUID v4
+export function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// Get today's date as YYYY-MM-DD
+export function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+// Format seconds into MM:SS
+export function formatTime(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Format minutes into human readable
+export function formatMinutes(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+}
+
+// Calculate chapter progress (0 to 1)
+export function calculateChapterProgress(tasks: { status: string; deleted: boolean }[]): number {
+  if (!tasks || !Array.isArray(tasks)) return 0;
+  const activeTasks = tasks.filter((t) => !t.deleted);
+  if (activeTasks.length === 0) return 0;
+  const done = activeTasks.filter((t) => t.status === 'done').length;
+  return done / activeTasks.length;
+}
+
+// Calculate subject progress (average of chapter progresses, 0 to 1)
+export function calculateSubjectProgress(
+  chapters: { tasks: { status: string; deleted: boolean }[] }[]
+): number {
+  if (!chapters || !Array.isArray(chapters) || chapters.length === 0) return 0;
+  const total = chapters.reduce((sum, ch) => {
+    const tasks = ch ? ch.tasks : [];
+    return sum + calculateChapterProgress(tasks);
+  }, 0);
+  return total / chapters.length;
+}
+
+// Storage key with client namespace
+export function getStorageKey(clientId: string, key: string): string {
+  return `alcovia_${clientId}_${key}`;
+}

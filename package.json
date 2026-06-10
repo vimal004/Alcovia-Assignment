@@ -1,0 +1,14 @@
+{
+  "name": "alcovia",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm run dev --workspace=apps/mobile",
+    "server": "npm run dev --workspace=apps/server",
+    "dev": "npm run mobile"
+  }
+}
