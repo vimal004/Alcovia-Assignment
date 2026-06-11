@@ -169,6 +169,7 @@ app.post('/api/sync', async (req, res) => {
   try {
     const { clientId, clientActions, clientTasks, timezone, lastSyncedAt } = req.body;
     const clientTimezone = timezone || 'UTC';
+    const serverTime = new Date().toISOString();
     const today = getLocalDateString(new Date(), clientTimezone);
     // Extension 6: Delta sync — track what timestamp the client last synced from
     const clientLastSyncedAt: string | null = lastSyncedAt || null;
@@ -181,6 +182,7 @@ app.post('/api/sync', async (req, res) => {
     const updatedProcessedActionIds = { ...state.processedActionIds };
     const newWebhookLogs: WebhookLog[] = [];
     const syncedActionIds: string[] = [];
+    let dbMutated = false;
 
     // Order actions chronologically by creation timestamp to process updates in correct timeline sequence
     const actionsToProcess = (clientActions as SyncAction[]).sort(
@@ -204,6 +206,7 @@ app.post('/api/sync', async (req, res) => {
 
           if (!exists) {
             updatedSessions.push({ ...session, synced: true });
+            dbMutated = true;
 
             // Temporarily calculate student state metrics for webhook
             const tempState = recalculateStudentState(updatedSessions, today, clientTimezone);
@@ -264,6 +267,7 @@ app.post('/api/sync', async (req, res) => {
           const exists = updatedSessions.some((s) => s.id === session.id);
           if (!exists) {
             updatedSessions.push({ ...session, synced: true });
+            dbMutated = true;
           }
           break;
         }
@@ -279,8 +283,9 @@ app.post('/api/sync', async (req, res) => {
                 ...dbTask,
                 status: newStatus,
                 version: version,
-                updatedAt: action.timestamp,
+                updatedAt: serverTime,
               };
+              dbMutated = true;
             } else if (version === dbTask.version) {
               // Concurrent clock conflict: precedence done > in_progress > not_started
               const precedence: Record<string, number> = { not_started: 1, in_progress: 2, done: 3 };
@@ -291,8 +296,9 @@ app.post('/api/sync', async (req, res) => {
                 updatedTasks[taskId] = {
                   ...dbTask,
                   status: newStatus,
-                  updatedAt: action.timestamp,
+                  updatedAt: serverTime,
                 };
+                dbMutated = true;
               }
             }
           } else {
@@ -302,10 +308,11 @@ app.post('/api/sync', async (req, res) => {
               chapterId: action.payload.chapterId || 'unknown',
               title: action.payload.title || 'Custom Task',
               status: newStatus,
-              updatedAt: action.timestamp,
+              updatedAt: serverTime,
               version: version,
               deleted: false,
             };
+            dbMutated = true;
           }
           break;
         }
@@ -320,8 +327,9 @@ app.post('/api/sync', async (req, res) => {
                 ...dbTask,
                 deleted: true,
                 version: version,
-                updatedAt: action.timestamp,
+                updatedAt: serverTime,
               };
+              dbMutated = true;
             }
           }
           break;
@@ -360,6 +368,10 @@ app.post('/api/sync', async (req, res) => {
     }
 
     // Save back to DB
+    if (dbMutated) {
+      (state as any).lastServerMutationAt = serverTime;
+    }
+
     state.tasks = updatedTasks;
     state.sessions = updatedSessions;
     state.studentState = finalStudentState;
