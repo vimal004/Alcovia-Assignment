@@ -1,7 +1,7 @@
 # Alcovia Sync & Automation Engine
 
 This repository contains an offline-first student focus dashboard and syllabus progress tracker built using React Native (Expo), Express, and n8n. It includes robust conflict resolution, delta-based synchronization, and event deduplication to ensure consistency across multiple clients sharing the same account.
-
+ Demo Video Link: https://drive.google.com/file/d/1j6Jwmm9HIpUS__bKBSnPYKZI27d9De7v/view?usp=share_link
 ---
 
 ## Technical Features & Implementation Scope
